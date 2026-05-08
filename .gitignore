@@ -81,4 +81,5 @@ yarn-error.log*
 # General
 .DS_Store
 Thumbs.db
+repomix-output.xml
 ```

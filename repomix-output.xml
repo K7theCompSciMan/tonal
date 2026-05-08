@@ -1,0 +1,3254 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+.env.example
+.gitignore
+AGENTS.md
+CLAUDE.md
+eslint.config.mjs
+next.config.ts
+package.json
+postcss.config.mjs
+public/file.svg
+public/globe.svg
+public/next.svg
+public/vercel.svg
+public/window.svg
+README.md
+src/app/favicon.ico
+src/app/globals.css
+src/app/layout.tsx
+src/app/page.tsx
+src/components/LyricsPanel.tsx
+src/components/MobileNav.tsx
+src/components/NowPlayingExpanded.tsx
+src/components/PlaylistImportModal.tsx
+src/hooks/useKeyboardShortcuts.ts
+src/hooks/useSwipeGesture.ts
+src/hooks/useSyncedLyrics.ts
+src/lib/lyrics.ts
+src/lib/playlist-parser.ts
+src/lib/search.ts
+src/lib/supabase.ts
+src/lib/types.ts
+src/lib/youtube.ts
+supabase/schema.sql
+supabase/seed.sql
+tsconfig.json
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="src/components/LyricsPanel.tsx">
+'use client';
+// src/components/LyricsPanel.tsx
+
+import { useEffect, useRef } from 'react';
+import { LyricLine } from '../lib/lyrics';
+
+interface LyricsPanelProps {
+  syncedLines: LyricLine[];
+  plainLyrics: string | null;
+  activeIndex: number;
+  loading: boolean;
+}
+
+export default function LyricsPanel({ syncedLines, plainLyrics, activeIndex, loading }: LyricsPanelProps) {
+  const activeRef = useRef<HTMLParagraphElement>(null);
+
+  // Smooth-scroll active line into view
+  useEffect(() => {
+    if (activeRef.current) {
+      activeRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [activeIndex]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full text-[#6A6A6A] text-sm">
+        Loading lyrics…
+      </div>
+    );
+  }
+
+  // Synced lyrics view
+  if (syncedLines.length > 0) {
+    return (
+      <div className="overflow-y-auto h-full px-8 py-16 text-center select-none">
+        {syncedLines.map((line, i) => {
+          const isPast = i < activeIndex;
+          const isActive = i === activeIndex;
+          const isFuture = i > activeIndex;
+          return (
+            <p
+              key={i}
+              ref={isActive ? activeRef : null}
+              className="text-2xl font-bold leading-relaxed mb-3 transition-all duration-300"
+              style={{
+                color: isActive ? '#FFFFFF' : isPast ? '#6A6A6A' : '#B3B3B3',
+                transform: isActive ? 'scale(1.05)' : 'scale(1)',
+                opacity: isFuture ? 0.5 : 1,
+              }}
+            >
+              {line.text || '♪'}
+            </p>
+          );
+        })}
+        <div className="h-32" />
+      </div>
+    );
+  }
+
+  // Plain lyrics fallback
+  if (plainLyrics) {
+    return (
+      <div className="overflow-y-auto h-full px-8 py-8 text-[#B3B3B3] text-base leading-7 whitespace-pre-wrap">
+        {plainLyrics}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center justify-center h-full gap-3 text-[#6A6A6A]">
+      <span className="text-4xl">♪</span>
+      <p className="text-sm">No lyrics found for this track.</p>
+    </div>
+  );
+}
+</file>
+
+<file path="src/components/MobileNav.tsx">
+'use client';
+// src/components/MobileNav.tsx — bottom tab bar for mobile
+
+interface Tab {
+  id: string;
+  label: string;
+  icon: (active: boolean) => React.ReactNode;
+  href?: string;
+  onClick?: () => void;
+}
+
+interface Props {
+  activeTab: string;
+  onTabChange: (tab: string) => void;
+  hasNowPlaying: boolean;
+  onNowPlayingClick: () => void;
+}
+
+export default function MobileNav({ activeTab, onTabChange, hasNowPlaying, onNowPlayingClick }: Props) {
+  const tabs: Tab[] = [
+    {
+      id: 'home',
+      label: 'Home',
+      icon: (active) => (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? 'white' : '#B3B3B3'}>
+          <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+        </svg>
+      ),
+    },
+    {
+      id: 'search',
+      label: 'Search',
+      icon: (active) => (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? 'white' : '#B3B3B3'}>
+          <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+        </svg>
+      ),
+    },
+    {
+      id: 'library',
+      label: 'Library',
+      icon: (active) => (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? 'white' : '#B3B3B3'}>
+          <path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 5h-3v5.5a2.5 2.5 0 0 1-5 0 2.5 2.5 0 0 1 2.5-2.5c.57 0 1.08.19 1.5.51V5h4v2zm-13 2H3c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2v-2h-2v2H3V11h2V9z"/>
+        </svg>
+      ),
+    },
+  ];
+
+  return (
+    <nav className="mobile-tab-bar md:hidden">
+      {tabs.map(tab => {
+        const active = activeTab === tab.id;
+        return (
+          <button
+            key={tab.id}
+            onClick={() => onTabChange(tab.id)}
+            className="flex-1 flex flex-col items-center justify-center gap-1 text-xs font-medium transition-opacity active:opacity-60"
+            style={{ color: active ? 'white' : '#B3B3B3' }}
+          >
+            {tab.icon(active)}
+            {tab.label}
+          </button>
+        );
+      })}
+
+      {/* Now playing mini-tab */}
+      {hasNowPlaying && (
+        <button
+          onClick={onNowPlayingClick}
+          className="flex-1 flex flex-col items-center justify-center gap-1 text-xs font-medium"
+          style={{ color: activeTab === 'nowplaying' ? 'white' : '#B3B3B3' }}
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+          </svg>
+          Playing
+        </button>
+      )}
+    </nav>
+  );
+}
+</file>
+
+<file path="src/components/NowPlayingExpanded.tsx">
+'use client';
+// src/components/NowPlayingExpanded.tsx
+// Full-screen Now Playing view for mobile with swipe gestures
+
+import { useRef, useState } from 'react';
+import { useSwipeGesture } from '../hooks/useSwipeGesture';
+import LyricsPanel from './LyricsPanel';
+import { LyricLine } from '../lib/lyrics';
+
+interface Props {
+  song: {
+    title: string;
+    artist: string;
+    album?: string;
+    coverUrl?: string;
+  } | null;
+  isPlaying: boolean;
+  currentTime: number;
+  duration: number;
+  onPlayPause: () => void;
+  onNext: () => void;
+  onPrev: () => void;
+  onSeek: (time: number) => void;
+  onCollapse: () => void;
+  // Lyrics
+  syncedLines: LyricLine[];
+  plainLyrics: string | null;
+  activeIndex: number;
+  lyricsLoading: boolean;
+}
+
+export default function NowPlayingExpanded({
+  song, isPlaying, currentTime, duration,
+  onPlayPause, onNext, onPrev, onSeek, onCollapse,
+  syncedLines, plainLyrics, activeIndex, lyricsLoading,
+}: Props) {
+  const [tab, setTab] = useState<'player' | 'lyrics'>('player');
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useSwipeGesture(containerRef, {
+    onSwipeDown: onCollapse,
+    onSwipeLeft: onNext,
+    onSwipeRight: onPrev,
+  });
+
+  const formatTime = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  };
+
+  if (!song) return null;
+
+  const hasLyrics = syncedLines.length > 0 || plainLyrics;
+
+  return (
+    <div
+      ref={containerRef}
+      className="fixed inset-0 z-50 flex flex-col"
+      style={{ background: 'linear-gradient(180deg, #1a1a2e 0%, #121212 60%)' }}
+    >
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-6 pt-12 pb-4">
+        <button onClick={onCollapse} className="text-[#B3B3B3] hover:text-white">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/>
+          </svg>
+        </button>
+        <div className="text-center">
+          <p className="text-white text-sm font-semibold truncate max-w-[180px]">
+            {song.album ?? 'Now Playing'}
+          </p>
+        </div>
+        <button className="text-[#B3B3B3] hover:text-white">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+          </svg>
+        </button>
+      </div>
+
+      {/* Tab switcher (if lyrics available) */}
+      {hasLyrics && (
+        <div className="flex gap-4 px-6 mb-4">
+          {(['player', 'lyrics'] as const).map(t => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`text-sm font-semibold pb-1 border-b-2 transition-colors capitalize
+                ${tab === t ? 'text-white border-white' : 'text-[#B3B3B3] border-transparent'}`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Content */}
+      <div className="flex-1 overflow-hidden">
+        {tab === 'player' ? (
+          <div className="flex flex-col items-center px-8 py-4 h-full">
+            {/* Album Art */}
+            <div className="w-64 h-64 rounded-2xl overflow-hidden shadow-2xl mb-8 bg-[#282828]">
+              {song.coverUrl ? (
+                <img src={song.coverUrl} alt={song.title} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-6xl">🎵</div>
+              )}
+            </div>
+
+            {/* Track info */}
+            <div className="w-full mb-6 flex items-center justify-between">
+              <div>
+                <p className="text-white text-xl font-bold truncate max-w-[220px]">{song.title}</p>
+                <p className="text-[#B3B3B3] text-base">{song.artist}</p>
+              </div>
+              <button className="text-[#B3B3B3] hover:text-[#1DB954] transition-colors">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+              </button>
+            </div>
+
+            {/* Seek bar */}
+            <div className="w-full mb-4">
+              <input
+                type="range"
+                min={0}
+                max={duration || 1}
+                value={currentTime}
+                onChange={e => onSeek(Number(e.target.value))}
+                className="w-full h-1 rounded-full appearance-none bg-[#444] accent-[#1DB954] cursor-pointer"
+              />
+              <div className="flex justify-between text-[#B3B3B3] text-xs mt-1">
+                <span>{formatTime(currentTime)}</span>
+                <span>{formatTime(duration)}</span>
+              </div>
+            </div>
+
+            {/* Controls */}
+            <div className="flex items-center justify-between w-full mt-2">
+              <button onClick={onPrev} className="text-[#B3B3B3] hover:text-white p-2">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
+                </svg>
+              </button>
+              <button
+                onClick={onPlayPause}
+                className="w-16 h-16 bg-white rounded-full flex items-center justify-center hover:scale-105 transition-transform"
+              >
+                {isPlaying ? (
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="black">
+                    <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                  </svg>
+                ) : (
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="black" style={{ marginLeft: 3 }}>
+                    <path d="M8 5v14l11-7z"/>
+                  </svg>
+                )}
+              </button>
+              <button onClick={onNext} className="text-[#B3B3B3] hover:text-white p-2">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <LyricsPanel
+            syncedLines={syncedLines}
+            plainLyrics={plainLyrics}
+            activeIndex={activeIndex}
+            loading={lyricsLoading}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="src/components/PlaylistImportModal.tsx">
+'use client';
+// src/components/PlaylistImportModal.tsx
+// 4-step playlist import wizard: Upload → Preview → Resolve → Import
+
+import { useCallback, useRef, useState } from 'react';
+import { ParsedTrack, parsePlaylistFile } from '../lib/playlist-parser';
+import { autoResolveTrack, ResolvedTrack } from '../lib/search';
+
+interface Props {
+  onClose: () => void;
+  onImport: (name: string, tracks: Array<ParsedTrack & { resolved?: ResolvedTrack }>) => Promise<void>;
+}
+
+type Step = 'upload' | 'preview' | 'resolve' | 'done';
+
+export default function PlaylistImportModal({ onClose, onImport }: Props) {
+  const [step, setStep] = useState<Step>('upload');
+  const [playlistName, setPlaylistName] = useState('Imported Playlist');
+  const [tracks, setTracks] = useState<ParsedTrack[]>([]);
+  const [resolvedMap, setResolvedMap] = useState<Record<number, ResolvedTrack | null>>({});
+  const [resolveProgress, setResolveProgress] = useState(0);
+  const [importing, setImporting] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  // Step 1: read file
+  const handleFile = useCallback((file: File) => {
+    setPlaylistName(file.name.replace(/\.[^.]+$/, '') || 'Imported Playlist');
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      const parsed = parsePlaylistFile(text, file.name);
+      setTracks(parsed);
+      setStep('preview');
+    };
+    reader.readAsText(file);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  }, [handleFile]);
+
+  // Step 2 → 3: resolve tracks
+  const startResolve = useCallback(async () => {
+    setStep('resolve');
+    const map: Record<number, ResolvedTrack | null> = {};
+    for (let i = 0; i < tracks.length; i++) {
+      const t = tracks[i];
+      // Skip if has direct hint URL that looks like a direct audio stream
+      if (t.hintUrl && !t.hintUrl.includes('youtube') && !t.hintUrl.includes('youtu.be')) {
+        map[i] = { source: 'direct', streamUrl: t.hintUrl };
+      } else {
+        map[i] = await autoResolveTrack(t.title, t.artist);
+      }
+      setResolveProgress(Math.round(((i + 1) / tracks.length) * 100));
+    }
+    setResolvedMap(map);
+    setStep('done');
+  }, [tracks]);
+
+  // Step 4: import
+  const handleImport = useCallback(async () => {
+    setImporting(true);
+    const enriched = tracks.map((t, i) => ({ ...t, resolved: resolvedMap[i] ?? undefined }));
+    await onImport(playlistName, enriched);
+    setImporting(false);
+    onClose();
+  }, [tracks, resolvedMap, playlistName, onImport, onClose]);
+
+  const resolvedCount = Object.values(resolvedMap).filter(Boolean).length;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+      <div className="bg-[#282828] rounded-2xl w-full max-w-lg mx-4 p-6 shadow-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-white text-xl font-bold">Import Playlist</h2>
+          <button onClick={onClose} className="text-[#B3B3B3] hover:text-white text-2xl leading-none">&times;</button>
+        </div>
+
+        {/* Step indicator */}
+        <div className="flex gap-2 mb-6">
+          {(['upload', 'preview', 'resolve', 'done'] as Step[]).map((s, i) => (
+            <div key={s} className="flex items-center gap-2">
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold
+                ${step === s ? 'bg-[#1DB954] text-black' : 'bg-[#444] text-[#888]'}`}>
+                {i + 1}
+              </div>
+              {i < 3 && <div className="flex-1 h-0.5 bg-[#444] w-8" />}
+            </div>
+          ))}
+        </div>
+
+        {/* ---- STEP 1: Upload ---- */}
+        {step === 'upload' && (
+          <div
+            className="border-2 border-dashed border-[#444] rounded-xl p-8 text-center cursor-pointer hover:border-[#1DB954] transition-colors"
+            onDrop={handleDrop}
+            onDragOver={e => e.preventDefault()}
+            onClick={() => fileRef.current?.click()}
+          >
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".m3u,.m3u8,.json,.csv,.txt"
+              className="hidden"
+              onChange={e => { if (e.target.files?.[0]) handleFile(e.target.files[0]); }}
+            />
+            <div className="text-4xl mb-3">📂</div>
+            <p className="text-white font-semibold mb-1">Drop a playlist file here</p>
+            <p className="text-[#B3B3B3] text-sm">Supports M3U, M3U8, JSON, CSV, TXT</p>
+          </div>
+        )}
+
+        {/* ---- STEP 2: Preview ---- */}
+        {step === 'preview' && (
+          <div>
+            <div className="mb-4">
+              <label className="text-[#B3B3B3] text-sm mb-1 block">Playlist name</label>
+              <input
+                className="w-full bg-[#3E3E3E] text-white rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#1DB954]"
+                value={playlistName}
+                onChange={e => setPlaylistName(e.target.value)}
+              />
+            </div>
+            <p className="text-[#B3B3B3] text-sm mb-3">{tracks.length} tracks found</p>
+            <div className="max-h-48 overflow-y-auto space-y-1 mb-4">
+              {tracks.slice(0, 50).map((t, i) => (
+                <div key={i} className="flex gap-2 text-sm text-[#E0E0E0] py-1 border-b border-[#333]">
+                  <span className="text-[#6A6A6A] w-5 shrink-0">{i + 1}</span>
+                  <span className="flex-1 truncate">{t.title || '?'}</span>
+                  <span className="text-[#B3B3B3] truncate max-w-[120px]">{t.artist}</span>
+                </div>
+              ))}
+              {tracks.length > 50 && (
+                <p className="text-[#6A6A6A] text-xs text-center py-2">…and {tracks.length - 50} more</p>
+              )}
+            </div>
+            <button
+              onClick={startResolve}
+              className="w-full bg-[#1DB954] hover:bg-[#1ed760] text-black font-bold py-3 rounded-full transition-colors"
+            >
+              Find Stream URLs ({tracks.length} tracks)
+            </button>
+          </div>
+        )}
+
+        {/* ---- STEP 3: Resolving ---- */}
+        {step === 'resolve' && (
+          <div className="py-8 text-center">
+            <p className="text-white font-semibold mb-4">Finding music sources…</p>
+            <div className="w-full bg-[#444] rounded-full h-2 mb-3">
+              <div
+                className="bg-[#1DB954] h-2 rounded-full transition-all duration-300"
+                style={{ width: `${resolveProgress}%` }}
+              />
+            </div>
+            <p className="text-[#B3B3B3] text-sm">{resolveProgress}% — searching Jamendo &amp; YouTube</p>
+          </div>
+        )}
+
+        {/* ---- STEP 4: Done ---- */}
+        {step === 'done' && (
+          <div>
+            <div className="py-4 text-center mb-4">
+              <div className="text-4xl mb-2">✅</div>
+              <p className="text-white font-semibold">{resolvedCount} / {tracks.length} tracks resolved</p>
+              {resolvedCount < tracks.length && (
+                <p className="text-[#B3B3B3] text-sm mt-1">
+                  {tracks.length - resolvedCount} tracks could not be found — they will be imported without a stream URL.
+                </p>
+              )}
+            </div>
+            <button
+              onClick={handleImport}
+              disabled={importing}
+              className="w-full bg-[#1DB954] hover:bg-[#1ed760] disabled:opacity-50 text-black font-bold py-3 rounded-full transition-colors"
+            >
+              {importing ? 'Importing…' : `Import "${playlistName}"`}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="src/hooks/useKeyboardShortcuts.ts">
+'use client';
+// src/hooks/useKeyboardShortcuts.ts
+// Global keyboard shortcuts — wire this into your root layout or player component
+
+import { useEffect } from 'react';
+
+interface Shortcuts {
+  onPlayPause?: () => void;
+  onNext?: () => void;
+  onPrev?: () => void;
+  onSeekForward?: () => void;   // +5s
+  onSeekBack?: () => void;      // -5s
+  onLike?: () => void;
+  onToggleQueue?: () => void;
+  onShowHelp?: () => void;
+  onVolumeUp?: () => void;
+  onVolumeDown?: () => void;
+}
+
+export function useKeyboardShortcuts(shortcuts: Shortcuts) {
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input/textarea
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement).isContentEditable) return;
+
+      switch (e.key) {
+        case ' ':
+          e.preventDefault();
+          shortcuts.onPlayPause?.();
+          break;
+        case 'ArrowRight':
+          if (e.ctrlKey || e.metaKey) { e.preventDefault(); shortcuts.onNext?.(); }
+          else { e.preventDefault(); shortcuts.onSeekForward?.(); }
+          break;
+        case 'ArrowLeft':
+          if (e.ctrlKey || e.metaKey) { e.preventDefault(); shortcuts.onPrev?.(); }
+          else { e.preventDefault(); shortcuts.onSeekBack?.(); }
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          shortcuts.onVolumeUp?.();
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          shortcuts.onVolumeDown?.();
+          break;
+        case 'l':
+        case 'L':
+          shortcuts.onLike?.();
+          break;
+        case 'q':
+        case 'Q':
+          shortcuts.onToggleQueue?.();
+          break;
+        case '?':
+          shortcuts.onShowHelp?.();
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [shortcuts]);
+}
+
+// ---- Shortcuts help modal data (use this to render the ShortcutsModal) ----
+export const SHORTCUT_LIST = [
+  { keys: ['Space'], description: 'Play / Pause' },
+  { keys: ['←', '→'], description: 'Seek back / forward 5s' },
+  { keys: ['Ctrl', '←'], description: 'Previous track' },
+  { keys: ['Ctrl', '→'], description: 'Next track' },
+  { keys: ['↑', '↓'], description: 'Volume up / down' },
+  { keys: ['L'], description: 'Like / unlike current track' },
+  { keys: ['Q'], description: 'Toggle queue panel' },
+  { keys: ['?'], description: 'Show this help' },
+];
+</file>
+
+<file path="src/hooks/useSwipeGesture.ts">
+'use client';
+// src/hooks/useSwipeGesture.ts
+
+import { RefObject, useEffect } from 'react';
+
+interface SwipeHandlers {
+  onSwipeLeft?: () => void;
+  onSwipeRight?: () => void;
+  onSwipeUp?: () => void;
+  onSwipeDown?: () => void;
+}
+
+/**
+ * Attach swipe gesture detection to a DOM element.
+ * Uses passive touch listeners for performance.
+ * A gesture is only fired if the primary axis movement exceeds `threshold` px
+ * AND the primary axis movement is at least 1.5x the secondary axis movement.
+ */
+export function useSwipeGesture(
+  ref: RefObject<HTMLElement | null>,
+  handlers: SwipeHandlers,
+  threshold = 50
+) {
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    let startX = 0;
+    let startY = 0;
+
+    const onTouchStart = (e: TouchEvent) => {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      const dx = e.changedTouches[0].clientX - startX;
+      const dy = e.changedTouches[0].clientY - startY;
+      const absDx = Math.abs(dx);
+      const absDy = Math.abs(dy);
+
+      if (absDx > threshold && absDx > absDy * 1.5) {
+        if (dx < 0) handlers.onSwipeLeft?.();
+        else handlers.onSwipeRight?.();
+      } else if (absDy > threshold && absDy > absDx * 1.5) {
+        if (dy < 0) handlers.onSwipeUp?.();
+        else handlers.onSwipeDown?.();
+      }
+    };
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchend', onTouchEnd, { passive: true });
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [ref, handlers, threshold]);
+}
+</file>
+
+<file path="src/hooks/useSyncedLyrics.ts">
+'use client';
+// src/hooks/useSyncedLyrics.ts
+
+import { useEffect, useRef, useState } from 'react';
+import { fetchLyrics, getActiveLyricIndex, LyricLine } from '../lib/lyrics';
+
+interface UseSyncedLyricsOptions {
+  title: string | null;
+  artist: string | null;
+  album?: string;
+  currentTime: number; // seconds — update this from your player's onProgress
+}
+
+export function useSyncedLyrics({ title, artist, album, currentTime }: UseSyncedLyricsOptions) {
+  const [syncedLines, setSyncedLines] = useState<LyricLine[]>([]);
+  const [plainLyrics, setPlainLyrics] = useState<string | null>(null);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const [loading, setLoading] = useState(false);
+  const lastFetchKey = useRef('');
+
+  // Fetch lyrics when song changes
+  useEffect(() => {
+    if (!title || !artist) {
+      setSyncedLines([]);
+      setPlainLyrics(null);
+      setActiveIndex(-1);
+      return;
+    }
+    const key = `${artist}::${title}::${album ?? ''}`;
+    if (key === lastFetchKey.current) return;
+    lastFetchKey.current = key;
+
+    setLoading(true);
+    setSyncedLines([]);
+    setPlainLyrics(null);
+
+    fetchLyrics(title, artist, album).then(({ synced, plain }) => {
+      if (synced) setSyncedLines(synced);
+      setPlainLyrics(plain);
+      setLoading(false);
+    });
+  }, [title, artist, album]);
+
+  // Update active index on time change
+  useEffect(() => {
+    if (!syncedLines.length) return;
+    const idx = getActiveLyricIndex(syncedLines, currentTime);
+    setActiveIndex(prev => (prev !== idx ? idx : prev));
+  }, [currentTime, syncedLines]);
+
+  return { syncedLines, plainLyrics, activeIndex, loading };
+}
+</file>
+
+<file path="src/lib/lyrics.ts">
+// src/lib/lyrics.ts
+// Synced lyrics using lrclib.net (free, no key) with fallback to lyrics.ovh
+
+export interface LyricLine {
+    time: number; // seconds
+    text: string;
+  }
+  
+  /** Parse .lrc format into timed lines */
+  export function parseLRC(lrc: string): LyricLine[] {
+    const lines = lrc.split('\n');
+    const result: LyricLine[] = [];
+    for (const line of lines) {
+      const match = line.match(/\[(\d+):(\d+\.\d+)\](.*)/);
+      if (!match) continue;
+      const time = parseInt(match[1]) * 60 + parseFloat(match[2]);
+      const text = match[3].trim();
+      if (text) result.push({ time, text });
+    }
+    return result.sort((a, b) => a.time - b.time);
+  }
+  
+  /** Fetch synced lyrics from lrclib.net, fallback to plain lyrics */
+  export async function fetchLyrics(
+    title: string,
+    artist: string,
+    album?: string
+  ): Promise<{ synced: LyricLine[] | null; plain: string | null }> {
+    // Try lrclib.net first (has synced LRC)
+    try {
+      const params = new URLSearchParams({ track_name: title, artist_name: artist });
+      if (album) params.set('album_name', album);
+      const res = await fetch(`https://lrclib.net/api/get?${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.syncedLyrics) {
+          return { synced: parseLRC(data.syncedLyrics), plain: data.plainLyrics ?? null };
+        }
+        if (data.plainLyrics) {
+          return { synced: null, plain: data.plainLyrics };
+        }
+      }
+    } catch (_) { /* fall through */ }
+  
+    // Fallback to lyrics.ovh (plain text only)
+    try {
+      const res = await fetch(
+        `https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(title)}`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        if (data.lyrics) return { synced: null, plain: data.lyrics };
+      }
+    } catch (_) { /* give up */ }
+  
+    return { synced: null, plain: null };
+  }
+  
+  /** Given current playback time and sorted lyric lines, return the active line index */
+  export function getActiveLyricIndex(lines: LyricLine[], currentTime: number): number {
+    if (!lines.length) return -1;
+    let idx = 0;
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].time <= currentTime) idx = i;
+      else break;
+    }
+    return idx;
+  }
+</file>
+
+<file path="src/lib/playlist-parser.ts">
+// src/lib/playlist-parser.ts
+// Parses M3U, JSON, CSV, and TXT playlist files into a common track format
+
+export interface ParsedTrack {
+    title: string;
+    artist: string;
+    duration?: number;       // seconds
+    hintUrl?: string;        // direct stream URL if already known (from M3U)
+    resolved?: boolean;      // true once autoResolveTrack() has run
+  }
+  
+  // ---- M3U -------------------------------------------------------------------
+  
+  export function parseM3U(text: string): ParsedTrack[] {
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+    const tracks: ParsedTrack[] = [];
+    let pending: Partial<ParsedTrack> = {};
+  
+    for (const line of lines) {
+      if (line.startsWith('#EXTINF:')) {
+        // #EXTINF:duration,Artist - Title
+        const match = line.match(/^#EXTINF:(-?\d+),(.*)$/);
+        if (match) {
+          const duration = parseInt(match[1]);
+          const info = match[2].trim();
+          const dashIdx = info.indexOf(' - ');
+          if (dashIdx !== -1) {
+            pending.artist = info.slice(0, dashIdx).trim();
+            pending.title = info.slice(dashIdx + 3).trim();
+          } else {
+            pending.title = info;
+            pending.artist = '';
+          }
+          if (duration > 0) pending.duration = duration;
+        }
+      } else if (!line.startsWith('#')) {
+        // URL line — attach to pending or create minimal entry
+        const hintUrl = line.startsWith('http') ? line : undefined;
+        tracks.push({
+          title: pending.title ?? 'Unknown',
+          artist: pending.artist ?? '',
+          duration: pending.duration,
+          hintUrl,
+        });
+        pending = {};
+      }
+    }
+    return tracks;
+  }
+  
+  // ---- JSON ------------------------------------------------------------------
+  
+  export function parseJSON(text: string): ParsedTrack[] {
+    let parsed: unknown;
+    try { parsed = JSON.parse(text); } catch { return []; }
+  
+    const arr: unknown[] = Array.isArray(parsed) ? parsed : (parsed as Record<string, unknown>)?.tracks
+      ? ((parsed as Record<string, unknown>).tracks as unknown[])
+      : [parsed];
+  
+    return arr.flatMap((item) => {
+      if (typeof item !== 'object' || !item) return [];
+      const o = item as Record<string, unknown>;
+      const title = (o.title ?? o.name ?? o.track_name ?? '') as string;
+      const artist = (o.artist ?? o.artist_name ?? o.artistName ?? '') as string;
+      const hintUrl = (o.url ?? o.stream_url ?? o.audio ?? o.preview_url ?? '') as string || undefined;
+      if (!title && !artist) return [];
+      return [{ title: String(title), artist: String(artist), hintUrl }];
+    });
+  }
+  
+  // ---- CSV -------------------------------------------------------------------
+  
+  export function parseCSV(text: string): ParsedTrack[] {
+    const rows = text.split('\n').map(r => r.trim()).filter(Boolean);
+    if (!rows.length) return [];
+  
+    // Auto-detect header
+    const header = rows[0].toLowerCase().split(',').map(h => h.replace(/"/g, '').trim());
+    const titleIdx = ['title', 'name', 'track', 'track_name', 'song'].map(k => header.indexOf(k)).find(i => i !== -1) ?? 0;
+    const artistIdx = ['artist', 'artist_name', 'artistname', 'author'].map(k => header.indexOf(k)).find(i => i !== -1) ?? 1;
+    const urlIdx = ['url', 'stream_url', 'audio', 'link'].map(k => header.indexOf(k)).find(i => i !== -1) ?? -1;
+  
+    const dataRows = header.some(h => ['title', 'name', 'artist'].includes(h)) ? rows.slice(1) : rows;
+  
+    return dataRows.flatMap(row => {
+      const cols = row.split(',').map(c => c.replace(/^"|"$/g, '').trim());
+      const title = cols[titleIdx] ?? '';
+      const artist = cols[artistIdx] ?? '';
+      const hintUrl = urlIdx !== -1 ? cols[urlIdx] : undefined;
+      if (!title) return [];
+      return [{ title, artist, hintUrl: hintUrl || undefined }];
+    });
+  }
+  
+  // ---- TXT -------------------------------------------------------------------
+  
+  export function parseTXT(text: string): ParsedTrack[] {
+    return text.split('\n')
+      .map(l => l.trim())
+      .filter(l => l && !l.startsWith('#'))
+      .flatMap(line => {
+        // Smart dash detection: "Artist - Title" or "Artist – Title" or "Artist — Title"
+        const dashMatch = line.match(/^(.+?)\s*[-–—]\s*(.+)$/);
+        if (dashMatch) {
+          return [{ artist: dashMatch[1].trim(), title: dashMatch[2].trim() }];
+        }
+        return [{ title: line, artist: '' }];
+      });
+  }
+  
+  // ---- Dispatcher ------------------------------------------------------------
+  
+  export function parsePlaylistFile(text: string, filename: string): ParsedTrack[] {
+    const ext = filename.split('.').pop()?.toLowerCase();
+    switch (ext) {
+      case 'm3u':
+      case 'm3u8':
+        return parseM3U(text);
+      case 'json':
+        return parseJSON(text);
+      case 'csv':
+        return parseCSV(text);
+      case 'txt':
+      default:
+        // Try JSON first (sometimes .txt is actually JSON)
+        if (text.trimStart().startsWith('[') || text.trimStart().startsWith('{')) {
+          const result = parseJSON(text);
+          if (result.length) return result;
+        }
+        return parseTXT(text);
+    }
+  }
+</file>
+
+<file path="src/lib/search.ts">
+// src/lib/search.ts
+// Auto-resolve tracks against Jamendo and YouTube
+
+export interface ResolvedTrack {
+    source: 'jamendo' | 'youtube' | 'direct';
+    streamUrl: string;        // direct audio URL (jamendo) or YouTube watch URL
+    jamendoId?: string;       // cache this, not the audio URL (it expires)
+    youtubeId?: string;       // cache this
+    thumbnailUrl?: string;
+  }
+  
+  // ---- Jamendo ---------------------------------------------------------------
+  
+  interface JamendoTrack {
+    id: string;
+    name: string;
+    artist_name: string;
+    audio: string;
+    album_image: string;
+  }
+  
+  export async function searchJamendo(query: string): Promise<JamendoTrack | null> {
+    const clientId = process.env.NEXT_PUBLIC_JAMENDO_CLIENT_ID;
+    if (!clientId) return null;
+    try {
+      const url = `https://api.jamendo.com/v3.0/tracks/?client_id=${clientId}`
+        + `&search=${encodeURIComponent(query.slice(0, 128))}&audioformat=mp32&limit=1`;
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.results?.[0] ?? null;
+    } catch {
+      return null;
+    }
+  }
+  
+  /** Re-fetch audio URL from Jamendo by track ID (URLs expire, so store ID not URL) */
+  export async function fetchJamendoAudioUrl(jamendoId: string): Promise<string | null> {
+    const clientId = process.env.NEXT_PUBLIC_JAMENDO_CLIENT_ID;
+    if (!clientId) return null;
+    try {
+      const res = await fetch(
+        `https://api.jamendo.com/v3.0/tracks/?client_id=${clientId}&id=${jamendoId}&audioformat=mp32`
+      );
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.results?.[0]?.audio ?? null;
+    } catch {
+      return null;
+    }
+  }
+  
+  // ---- YouTube ---------------------------------------------------------------
+  
+  interface YouTubeItem {
+    id: { videoId: string };
+    snippet: { title: string; channelTitle: string; thumbnails: { default: { url: string } } };
+  }
+  
+  export async function searchYouTube(query: string): Promise<YouTubeItem | null> {
+    const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+    if (!apiKey) return null;
+    try {
+      const url = `https://www.googleapis.com/youtube/v3/search`
+        + `?q=${encodeURIComponent(query)}&type=video&videoCategoryId=10`
+        + `&maxResults=1&part=snippet&key=${apiKey}`;
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.items?.[0] ?? null;
+    } catch {
+      return null;
+    }
+  }
+  
+  // ---- Combined resolver -----------------------------------------------------
+  
+  export async function autoResolveTrack(
+    title: string,
+    artist: string
+  ): Promise<ResolvedTrack | null> {
+    const query = `${artist} ${title}`.trim();
+  
+    // 1. Try Jamendo first (better audio quality, no embed restriction)
+    const jamendo = await searchJamendo(query);
+    if (jamendo?.audio) {
+      return {
+        source: 'jamendo',
+        streamUrl: jamendo.audio,
+        jamendoId: jamendo.id,
+        thumbnailUrl: jamendo.album_image,
+      };
+    }
+  
+    // 2. Fall back to YouTube
+    const yt = await searchYouTube(query);
+    if (yt?.id?.videoId) {
+      return {
+        source: 'youtube',
+        streamUrl: `https://www.youtube.com/watch?v=${yt.id.videoId}`,
+        youtubeId: yt.id.videoId,
+        thumbnailUrl: yt.snippet.thumbnails.default.url,
+      };
+    }
+  
+    return null;
+  }
+  
+  // ---- Combined search for SearchBar -----------------------------------------
+  // Returns merged results from both sources for display in search UI
+  
+  export interface SearchResult {
+    id: string;
+    title: string;
+    artist: string;
+    thumbnailUrl: string;
+    source: 'jamendo' | 'youtube';
+    streamUrl: string;
+    jamendoId?: string;
+    youtubeId?: string;
+  }
+  
+  export async function searchAllSources(query: string): Promise<SearchResult[]> {
+    const [jamendoResults, youtubeResults] = await Promise.allSettled([
+      searchJamendoMulti(query),
+      searchYouTubeMulti(query),
+    ]);
+  
+    const jamendo: SearchResult[] = jamendoResults.status === 'fulfilled'
+      ? (jamendoResults.value ?? [])
+      : [];
+    const youtube: SearchResult[] = youtubeResults.status === 'fulfilled'
+      ? (youtubeResults.value ?? [])
+      : [];
+  
+    // Interleave: 1 Jamendo, 1 YouTube, etc.
+    const merged: SearchResult[] = [];
+    const max = Math.max(jamendo.length, youtube.length);
+    for (let i = 0; i < max; i++) {
+      if (jamendo[i]) merged.push(jamendo[i]);
+      if (youtube[i]) merged.push(youtube[i]);
+    }
+    return merged;
+  }
+  
+  async function searchJamendoMulti(query: string): Promise<SearchResult[]> {
+    const clientId = process.env.NEXT_PUBLIC_JAMENDO_CLIENT_ID;
+    if (!clientId) return [];
+    try {
+      const res = await fetch(
+        `https://api.jamendo.com/v3.0/tracks/?client_id=${clientId}`
+        + `&search=${encodeURIComponent(query)}&audioformat=mp32&limit=5`
+      );
+      const data = await res.json();
+      return (data.results ?? []).map((t: JamendoTrack) => ({
+        id: `jamendo-${t.id}`,
+        title: t.name,
+        artist: t.artist_name,
+        thumbnailUrl: t.album_image,
+        source: 'jamendo' as const,
+        streamUrl: t.audio,
+        jamendoId: t.id,
+      }));
+    } catch { return []; }
+  }
+  
+  async function searchYouTubeMulti(query: string): Promise<SearchResult[]> {
+    const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+    if (!apiKey) return [];
+    try {
+      const res = await fetch(
+        `https://www.googleapis.com/youtube/v3/search?q=${encodeURIComponent(query)}`
+        + `&type=video&videoCategoryId=10&maxResults=5&part=snippet&key=${apiKey}`
+      );
+      const data = await res.json();
+      return (data.items ?? []).map((item: YouTubeItem) => ({
+        id: `youtube-${item.id.videoId}`,
+        title: item.snippet.title,
+        artist: item.snippet.channelTitle,
+        thumbnailUrl: item.snippet.thumbnails.default.url,
+        source: 'youtube' as const,
+        streamUrl: `https://www.youtube.com/watch?v=${item.id.videoId}`,
+        youtubeId: item.id.videoId,
+      }));
+    } catch { return []; }
+  }
+</file>
+
+<file path=".env.example">
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+NEXT_PUBLIC_YOUTUBE_API_KEY=your-youtube-data-api-v3-key
+NEXT_PUBLIC_JAMENDO_CLIENT_ID=your-jamendo-client-id
+</file>
+
+<file path="AGENTS.md">
+<!-- BEGIN:nextjs-agent-rules -->
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+<!-- END:nextjs-agent-rules -->
+</file>
+
+<file path="CLAUDE.md">
+@AGENTS.md
+</file>
+
+<file path="next.config.ts">
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  /* config options here */
+};
+
+export default nextConfig;
+</file>
+
+<file path="postcss.config.mjs">
+const config = {
+  plugins: {
+    "@tailwindcss/postcss": {},
+  },
+};
+
+export default config;
+</file>
+
+<file path="public/file.svg">
+<svg fill="none" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M14.5 13.5V5.41a1 1 0 0 0-.3-.7L9.8.29A1 1 0 0 0 9.08 0H1.5v13.5A2.5 2.5 0 0 0 4 16h8a2.5 2.5 0 0 0 2.5-2.5m-1.5 0v-7H8v-5H3v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1M9.5 5V2.12L12.38 5zM5.13 5h-.62v1.25h2.12V5zm-.62 3h7.12v1.25H4.5zm.62 3h-.62v1.25h7.12V11z" clip-rule="evenodd" fill="#666" fill-rule="evenodd"/></svg>
+</file>
+
+<file path="public/globe.svg">
+<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><g clip-path="url(#a)"><path fill-rule="evenodd" clip-rule="evenodd" d="M10.27 14.1a6.5 6.5 0 0 0 3.67-3.45q-1.24.21-2.7.34-.31 1.83-.97 3.1M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m.48-1.52a7 7 0 0 1-.96 0H7.5a4 4 0 0 1-.84-1.32q-.38-.89-.63-2.08a40 40 0 0 0 3.92 0q-.25 1.2-.63 2.08a4 4 0 0 1-.84 1.31zm2.94-4.76q1.66-.15 2.95-.43a7 7 0 0 0 0-2.58q-1.3-.27-2.95-.43a18 18 0 0 1 0 3.44m-1.27-3.54a17 17 0 0 1 0 3.64 39 39 0 0 1-4.3 0 17 17 0 0 1 0-3.64 39 39 0 0 1 4.3 0m1.1-1.17q1.45.13 2.69.34a6.5 6.5 0 0 0-3.67-3.44q.65 1.26.98 3.1M8.48 1.5l.01.02q.41.37.84 1.31.38.89.63 2.08a40 40 0 0 0-3.92 0q.25-1.2.63-2.08a4 4 0 0 1 .85-1.32 7 7 0 0 1 .96 0m-2.75.4a6.5 6.5 0 0 0-3.67 3.44 29 29 0 0 1 2.7-.34q.31-1.83.97-3.1M4.58 6.28q-1.66.16-2.95.43a7 7 0 0 0 0 2.58q1.3.27 2.95.43a18 18 0 0 1 0-3.44m.17 4.71q-1.45-.12-2.69-.34a6.5 6.5 0 0 0 3.67 3.44q-.65-1.27-.98-3.1" fill="#666"/></g><defs><clipPath id="a"><path fill="#fff" d="M0 0h16v16H0z"/></clipPath></defs></svg>
+</file>
+
+<file path="public/next.svg">
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 394 80"><path fill="#000" d="M262 0h68.5v12.7h-27.2v66.6h-13.6V12.7H262V0ZM149 0v12.7H94v20.4h44.3v12.6H94v21h55v12.6H80.5V0h68.7zm34.3 0h-17.8l63.8 79.4h17.9l-32-39.7 32-39.6h-17.9l-23 28.6-23-28.6zm18.3 56.7-9-11-27.1 33.7h17.8l18.3-22.7z"/><path fill="#000" d="M81 79.3 17 0H0v79.3h13.6V17l50.2 62.3H81Zm252.6-.4c-1 0-1.8-.4-2.5-1s-1.1-1.6-1.1-2.6.3-1.8 1-2.5 1.6-1 2.6-1 1.8.3 2.5 1a3.4 3.4 0 0 1 .6 4.3 3.7 3.7 0 0 1-3 1.8zm23.2-33.5h6v23.3c0 2.1-.4 4-1.3 5.5a9.1 9.1 0 0 1-3.8 3.5c-1.6.8-3.5 1.3-5.7 1.3-2 0-3.7-.4-5.3-1s-2.8-1.8-3.7-3.2c-.9-1.3-1.4-3-1.4-5h6c.1.8.3 1.6.7 2.2s1 1.2 1.6 1.5c.7.4 1.5.5 2.4.5 1 0 1.8-.2 2.4-.6a4 4 0 0 0 1.6-1.8c.3-.8.5-1.8.5-3V45.5zm30.9 9.1a4.4 4.4 0 0 0-2-3.3 7.5 7.5 0 0 0-4.3-1.1c-1.3 0-2.4.2-3.3.5-.9.4-1.6 1-2 1.6a3.5 3.5 0 0 0-.3 4c.3.5.7.9 1.3 1.2l1.8 1 2 .5 3.2.8c1.3.3 2.5.7 3.7 1.2a13 13 0 0 1 3.2 1.8 8.1 8.1 0 0 1 3 6.5c0 2-.5 3.7-1.5 5.1a10 10 0 0 1-4.4 3.5c-1.8.8-4.1 1.2-6.8 1.2-2.6 0-4.9-.4-6.8-1.2-2-.8-3.4-2-4.5-3.5a10 10 0 0 1-1.7-5.6h6a5 5 0 0 0 3.5 4.6c1 .4 2.2.6 3.4.6 1.3 0 2.5-.2 3.5-.6 1-.4 1.8-1 2.4-1.7a4 4 0 0 0 .8-2.4c0-.9-.2-1.6-.7-2.2a11 11 0 0 0-2.1-1.4l-3.2-1-3.8-1c-2.8-.7-5-1.7-6.6-3.2a7.2 7.2 0 0 1-2.4-5.7 8 8 0 0 1 1.7-5 10 10 0 0 1 4.3-3.5c2-.8 4-1.2 6.4-1.2 2.3 0 4.4.4 6.2 1.2 1.8.8 3.2 2 4.3 3.4 1 1.4 1.5 3 1.5 5h-5.8z"/></svg>
+</file>
+
+<file path="public/vercel.svg">
+<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1155 1000"><path d="m577.3 0 577.4 1000H0z" fill="#fff"/></svg>
+</file>
+
+<file path="public/window.svg">
+<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M1.5 2.5h13v10a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1zM0 1h16v11.5a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 0 12.5zm3.75 4.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M7 4.75a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0m1.75.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5" fill="#666"/></svg>
+</file>
+
+<file path="src/app/globals.css">
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+</file>
+
+<file path="src/lib/types.ts">
+export type DbSong = {
+  id: string;
+  created_at: string;
+  title: string;
+  artist: string;
+  album: string | null;
+  cover_url: string | null;
+  stream_url: string;
+  source_type: "direct" | "youtube";
+  genre: string | null;
+  mood: string | null;
+  duration_seconds: number | null;
+  uploaded_by: string | null;
+};
+
+export type DbPlaylist = {
+  id: string;
+  created_at: string;
+  name: string;
+  description: string | null;
+  is_public: boolean;
+  owner_id: string;
+};
+
+export type DbPlaylistSong = {
+  playlist_id: string;
+  song_id: string;
+  added_at: string;
+};
+
+export type SongWithPlaylistState = DbSong & {
+  inActivePlaylist: boolean;
+};
+</file>
+
+<file path="src/lib/youtube.ts">
+const YT_ID_REGEX =
+  /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|embed\/))([a-zA-Z0-9_-]{11})/;
+
+export function extractYouTubeId(input: string): string | null {
+  const trimmed = input.trim();
+  if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  const match = trimmed.match(YT_ID_REGEX);
+  return match?.[1] ?? null;
+}
+
+export function toYouTubeEmbedUrl(input: string): string | null {
+  const id = extractYouTubeId(input);
+  return id ? `https://www.youtube.com/watch?v=${id}` : null;
+}
+</file>
+
+<file path="supabase/schema.sql">
+create extension if not exists "pgcrypto";
+
+create table if not exists public.songs (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  title text not null,
+  artist text not null,
+  album text,
+  cover_url text,
+  stream_url text not null,
+  source_type text not null check (source_type in ('direct', 'youtube')),
+  genre text,
+  mood text,
+  duration_seconds integer,
+  uploaded_by uuid references auth.users(id) on delete set null
+);
+
+create table if not exists public.playlists (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  name text not null,
+  description text,
+  is_public boolean not null default true,
+  owner_id uuid not null references auth.users(id) on delete cascade
+);
+
+create table if not exists public.playlist_songs (
+  playlist_id uuid not null references public.playlists(id) on delete cascade,
+  song_id uuid not null references public.songs(id) on delete cascade,
+  position integer not null default 0,
+  added_at timestamptz not null default now(),
+  primary key (playlist_id, song_id)
+);
+
+alter table public.playlist_songs add column if not exists position integer not null default 0;
+
+alter table public.songs enable row level security;
+alter table public.playlists enable row level security;
+alter table public.playlist_songs enable row level security;
+
+drop policy if exists "songs_select_all" on public.songs;
+create policy "songs_select_all" on public.songs
+for select using (true);
+
+drop policy if exists "songs_insert_auth" on public.songs;
+create policy "songs_insert_auth" on public.songs
+for insert to authenticated
+with check (auth.uid() = uploaded_by);
+
+drop policy if exists "playlists_select_public_or_owner" on public.playlists;
+create policy "playlists_select_public_or_owner" on public.playlists
+for select
+using (is_public or auth.uid() = owner_id);
+
+drop policy if exists "playlists_insert_owner_only" on public.playlists;
+create policy "playlists_insert_owner_only" on public.playlists
+for insert to authenticated
+with check (auth.uid() = owner_id);
+
+drop policy if exists "playlists_update_owner_only" on public.playlists;
+create policy "playlists_update_owner_only" on public.playlists
+for update to authenticated
+using (auth.uid() = owner_id)
+with check (auth.uid() = owner_id);
+
+drop policy if exists "playlists_delete_owner_only" on public.playlists;
+create policy "playlists_delete_owner_only" on public.playlists
+for delete to authenticated
+using (auth.uid() = owner_id);
+
+drop policy if exists "playlist_songs_select_public_or_owner" on public.playlist_songs;
+create policy "playlist_songs_select_public_or_owner" on public.playlist_songs
+for select
+using (
+  exists (
+    select 1 from public.playlists p
+    where p.id = playlist_id and (p.is_public or p.owner_id = auth.uid())
+  )
+);
+
+drop policy if exists "playlist_songs_insert_owner_only" on public.playlist_songs;
+create policy "playlist_songs_insert_owner_only" on public.playlist_songs
+for insert to authenticated
+with check (
+  exists (
+    select 1 from public.playlists p
+    where p.id = playlist_id and p.owner_id = auth.uid()
+  )
+);
+
+drop policy if exists "playlist_songs_delete_owner_only" on public.playlist_songs;
+create policy "playlist_songs_delete_owner_only" on public.playlist_songs
+for delete to authenticated
+using (
+  exists (
+    select 1 from public.playlists p
+    where p.id = playlist_id and p.owner_id = auth.uid()
+  )
+);
+
+drop policy if exists "playlist_songs_update_owner_only" on public.playlist_songs;
+create policy "playlist_songs_update_owner_only" on public.playlist_songs
+for update to authenticated
+using (
+  exists (
+    select 1 from public.playlists p
+    where p.id = playlist_id and p.owner_id = auth.uid()
+  )
+)
+with check (
+  exists (
+    select 1 from public.playlists p
+    where p.id = playlist_id and p.owner_id = auth.uid()
+  )
+);
+</file>
+
+<file path="supabase/seed.sql">
+insert into public.songs
+  (title, artist, album, cover_url, stream_url, source_type, genre, mood)
+values
+  (
+    'Night Drive',
+    'Openwave',
+    'Synthetic Horizons',
+    'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=600&q=80',
+    'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+    'direct',
+    'Synthwave',
+    'Focus'
+  ),
+  (
+    'Lo-fi Rain',
+    'City Echo',
+    'Midnight Sessions',
+    'https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&w=600&q=80',
+    'https://www.youtube.com/watch?v=jfKfPfyJRdk',
+    'youtube',
+    'Lo-fi',
+    'Calm'
+  );
+</file>
+
+<file path=".gitignore">
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env.local
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+</file>
+
+<file path="eslint.config.mjs">
+import { defineConfig, globalIgnores } from "eslint/config";
+
+const eslintConfig = defineConfig([
+  // Override default ignores of eslint-config-next.
+  globalIgnores([
+    // Default ignores of eslint-config-next:
+    ".next/**",
+    "out/**",
+    "build/**",
+    "next-env.d.ts",
+  ]),
+]);
+
+export default eslintConfig;
+</file>
+
+<file path="package.json">
+{
+  "name": "tonal",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.57.4",
+    "next": "^15.5.6",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-player": "^3.3.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "^15.5.6",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
+</file>
+
+<file path="README.md">
+# Tonal
+
+Spotify-like music streaming web app using Next.js + Supabase.
+
+## Features
+
+- Email/password auth with Supabase.
+- Song discovery with search + genre/mood filters.
+- External song search via YouTube Data API + iTunes + Jamendo APIs.
+- Playback queue with previous/next and pause/play controls.
+- Queue adjustment controls (move up/down, remove from queue).
+- Playlists (create playlist, add songs, load playlist queue).
+- Playlist management (rename, delete, remove tracks).
+- Playlist portability (import JSON/M3U/CSV/TXT and export JSON/M3U).
+- Upload songs into catalog (direct stream URL or YouTube URL/video ID).
+- YouTube playback via embedded player support (through `react-player`).
+- Song lyric lookup with automatic matching while a song plays.
+- Responsive Spotify-inspired UI with mobile sidebar toggle.
+
+## Tech Stack
+
+- Next.js App Router + TypeScript + Tailwind.
+- Supabase (Auth + Postgres + RLS).
+- `react-player` for mixed source playback (direct audio + YouTube).
+
+## Setup
+
+### 1) Install dependencies
+
+```bash
+npm install
+```
+
+### 2) Create Supabase project
+
+1. Create a project in [Supabase](https://supabase.com).
+2. Go to SQL Editor and run:
+   - `supabase/schema.sql`
+   - optional sample data: `supabase/seed.sql`
+3. In Authentication > Providers, keep Email enabled.
+4. In Authentication > URL Configuration, set Site URL to `http://localhost:3000`.
+
+### 3) Configure environment variables
+
+Copy `.env.example` to `.env.local` and fill values:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+NEXT_PUBLIC_YOUTUBE_API_KEY=...
+NEXT_PUBLIC_JAMENDO_CLIENT_ID=...
+```
+
+You can find these in Supabase Project Settings > API.
+For external APIs:
+- YouTube key: create a key in Google Cloud Console for YouTube Data API v3.
+- Jamendo client ID: create from Jamendo developer dashboard.
+- iTunes Search API and lyrics.ovh are used without API keys.
+
+### 4) Run locally
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+## Important Notes About YouTube Streaming
+
+- This implementation plays YouTube links through an embedded player (not raw audio extraction).
+- If you want background server-side extraction/transcoding behavior, you will need your own media service and must ensure compliance with YouTube Terms of Service and local law.
+
+## Suggested Next Improvements
+
+- Add Supabase Storage upload flow for audio files.
+- Add artist/album pages and likes/follows.
+- Add realtime "currently listening" presence.
+- Add admin moderation and reporting tools.
+</file>
+
+<file path="src/app/layout.tsx">
+import type { Metadata, Viewport } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+import "./globals.css";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+export const metadata: Metadata = {
+  title: "Tonal - Streaming App",
+  description: "Spotify-like streaming web app powered by Supabase",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: "#000000",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html
+      lang="en"
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+    >
+      <body className="min-h-full flex flex-col">{children}</body>
+    </html>
+  );
+}
+</file>
+
+<file path="src/app/page.tsx">
+"use client";
+
+import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import ReactPlayer from "react-player";
+import { Session } from "@supabase/supabase-js";
+import { hasSupabaseEnv, supabase } from "@/lib/supabase";
+import { DbPlaylist, DbSong } from "@/lib/types";
+import { toYouTubeEmbedUrl } from "@/lib/youtube";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+type Tab = "home" | "search" | "library" | "upload" | "settings";
+type MobileTab = "home" | "search" | "library" | "nowplaying";
+type PlaylistWithSongs = DbPlaylist & { songs: DbSong[] };
+type PlaylistImportPayload = { name?: string; description?: string; songs?: Partial<DbSong>[] };
+type AppSettings = {
+  persistentQueueOrdering: boolean;
+  enableSwipeGestures: boolean;
+  enableNowPlayingView: boolean;
+};
+type ExternalSong = {
+  title: string;
+  artist: string;
+  streamUrl: string;
+  sourceType: "direct" | "youtube";
+  coverUrl?: string;
+  album?: string;
+};
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+const ytApiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY ?? "";
+const jamendoClientId = process.env.NEXT_PUBLIC_JAMENDO_CLIENT_ID ?? "";
+const SETTINGS_STORAGE_KEY = "tonal.settings.v1";
+const DEFAULT_COVER = "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?auto=format&fit=crop&w=400&q=80";
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function isProbablyUrl(value: string): boolean {
+  return /^https?:\/\//i.test(value.trim());
+}
+
+function formatTime(seconds: number): string {
+  if (!seconds || isNaN(seconds)) return "0:00";
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+function parseM3uSongs(content: string): Partial<DbSong>[] {
+  const lines = content.split(/\r?\n/).map((l) => l.trim());
+  const songs: Partial<DbSong>[] = [];
+  let pendingMeta: { title?: string; artist?: string } = {};
+  for (const line of lines) {
+    if (!line) continue;
+    if (line.startsWith("#EXTINF:")) {
+      const payload = line.split(",", 2)[1] ?? "";
+      const [artist, title] = payload.split(" - ");
+      pendingMeta = { artist: artist?.trim() || "Unknown Artist", title: title?.trim() || "Untitled" };
+      continue;
+    }
+    if (line.startsWith("#")) continue;
+    songs.push({
+      title: pendingMeta.title || "Imported Track",
+      artist: pendingMeta.artist || "Unknown Artist",
+      stream_url: line,
+      source_type: toYouTubeEmbedUrl(line) ? "youtube" : "direct",
+    });
+    pendingMeta = {};
+  }
+  return songs;
+}
+
+function parseCsvOrTxtSongs(content: string): Partial<DbSong>[] {
+  const lines = content.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  if (!lines.length) return [];
+  const first = lines[0].toLowerCase();
+  const hasHeader = first.includes("title") || first.includes("song") || first.includes("artist");
+  return lines.slice(hasHeader ? 1 : 0).map((line) => {
+    const byComma = line.split(",").map((p) => p.trim());
+    if (byComma.length >= 2) {
+      const [t, a, u] = byComma;
+      const hasUrl = u ? isProbablyUrl(u) : false;
+      return { title: t || "Imported Track", artist: a || "Unknown Artist", stream_url: hasUrl ? u : undefined };
+    }
+    const byDash = line.split(" - ").map((p) => p.trim());
+    if (byDash.length >= 2) return { artist: byDash[0], title: byDash[1] };
+    return { title: line, artist: "Unknown Artist" };
+  }).filter((s) => s.title || s.artist);
+}
+
+function downloadTextFile(filename: string, content: string, mimeType: string) {
+  const blob = new Blob([content], { type: mimeType });
+  const href = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = href; link.download = filename;
+  document.body.appendChild(link); link.click(); link.remove();
+  URL.revokeObjectURL(href);
+}
+
+// ─── API search functions ─────────────────────────────────────────────────────
+async function searchYouTubeSongs(query: string): Promise<ExternalSong[]> {
+  if (!ytApiKey) return [];
+  const params = new URLSearchParams({ part: "snippet", q: query, type: "video", videoCategoryId: "10", maxResults: "8", key: ytApiKey });
+  const res = await fetch(`https://www.googleapis.com/youtube/v3/search?${params}`);
+  if (!res.ok) return [];
+  const payload = (await res.json()) as { items?: { id?: { videoId?: string }; snippet?: { title?: string; channelTitle?: string; thumbnails?: { medium?: { url?: string } } } }[] };
+  return (payload.items ?? []).map((item) => {
+    const videoId = item.id?.videoId;
+    if (!videoId) return null;
+    return { title: item.snippet?.title || "YouTube Track", artist: item.snippet?.channelTitle || "YouTube", streamUrl: `https://www.youtube.com/watch?v=${videoId}`, sourceType: "youtube" as const, coverUrl: item.snippet?.thumbnails?.medium?.url };
+  }).filter(Boolean) as ExternalSong[];
+}
+
+async function searchITunesSongs(query: string): Promise<ExternalSong[]> {
+  const params = new URLSearchParams({ term: query, media: "music", entity: "song", limit: "8" });
+  const res = await fetch(`https://itunes.apple.com/search?${params}`);
+  if (!res.ok) return [];
+  const payload = (await res.json()) as { results?: { trackName?: string; artistName?: string; previewUrl?: string; artworkUrl100?: string; collectionName?: string }[] };
+  return (payload.results ?? []).filter((r) => r.previewUrl).map((r) => ({
+    title: r.trackName || "Preview Track", artist: r.artistName || "Unknown", streamUrl: r.previewUrl || "",
+    sourceType: "direct" as const, coverUrl: r.artworkUrl100, album: r.collectionName,
+  }));
+}
+
+async function searchJamendoSongs(query: string): Promise<ExternalSong[]> {
+  if (!jamendoClientId) return [];
+  const params = new URLSearchParams({ client_id: jamendoClientId, format: "json", limit: "8", namesearch: query, include: "musicinfo" });
+  const res = await fetch(`https://api.jamendo.com/v3.0/tracks/?${params}`);
+  if (!res.ok) return [];
+  const payload = (await res.json()) as { results?: { name?: string; artist_name?: string; audio?: string; image?: string; album_name?: string }[] };
+  return (payload.results ?? []).filter((r) => r.audio).map((r) => ({
+    title: r.name || "Jamendo Track", artist: r.artist_name || "Unknown", streamUrl: r.audio || "",
+    sourceType: "direct" as const, coverUrl: r.image, album: r.album_name,
+  }));
+}
+
+async function resolveImportedSongUrl(song: Partial<DbSong>): Promise<Partial<DbSong> | null> {
+  const rawUrl = song.stream_url?.trim() || "";
+  if (rawUrl) {
+    const source = song.source_type || (toYouTubeEmbedUrl(rawUrl) ? "youtube" : "direct");
+    return { ...song, stream_url: source === "youtube" ? toYouTubeEmbedUrl(rawUrl) ?? rawUrl : rawUrl, source_type: source };
+  }
+  const query = [song.title, song.artist].filter(Boolean).join(" ").trim();
+  if (!query) return null;
+  const [yt, it, jm] = await Promise.all([searchYouTubeSongs(query), searchITunesSongs(query), searchJamendoSongs(query)]);
+  const best = jm[0] ?? it[0] ?? yt[0];
+  if (!best) return null;
+  return { ...song, title: song.title || best.title, artist: song.artist || best.artist, album: song.album || best.album, cover_url: song.cover_url || best.coverUrl, stream_url: best.streamUrl, source_type: best.sourceType };
+}
+
+// ─── SVG Icons ────────────────────────────────────────────────────────────────
+const IconHome = ({ filled }: { filled?: boolean }) => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill={filled ? "white" : "none"} stroke={filled ? "none" : "currentColor"} strokeWidth="2">
+    <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H5a1 1 0 01-1-1V9.5z" />
+    <path d="M9 21V12h6v9" />
+  </svg>
+);
+const IconSearch = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
+  </svg>
+);
+const IconLibrary = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M3 3h2v18H3zM7 3h2v18H7zM11 3l8 4.5v9L11 21V3z" />
+  </svg>
+);
+const IconPlay = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M8 5v14l11-7z" />
+  </svg>
+);
+const IconPause = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+  </svg>
+);
+const IconPrev = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
+  </svg>
+);
+const IconNext = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z" />
+  </svg>
+);
+const IconChevronDown = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+    <path d="M6 9l6 6 6-6" />
+  </svg>
+);
+const IconPlus = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+    <path d="M12 5v14M5 12h14" />
+  </svg>
+);
+const IconUpload = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
+  </svg>
+);
+const IconSettings = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+  </svg>
+);
+const IconNote = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
+  </svg>
+);
+const IconLogout = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
+  </svg>
+);
+const IconSource = ({ type }: { type: string }) => (
+  type === "youtube"
+    ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-600/20 text-red-400">YT</span>
+    : <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-green-600/20 text-[#1DB954]">♪</span>
+);
+
+// ─── Components ───────────────────────────────────────────────────────────────
+
+function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!checked)}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${checked ? "bg-[#1DB954]" : "bg-[#444]"}`}
+    >
+      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${checked ? "translate-x-6" : "translate-x-1"}`} />
+    </button>
+  );
+}
+
+function SongCard({ song, isCurrent, playlists, onPlay, onAddToPlaylist, userId }: {
+  song: DbSong; isCurrent: boolean;
+  playlists: DbPlaylist[]; onPlay: () => void;
+  onAddToPlaylist: (playlistId: string) => void;
+  userId: string;
+}) {
+  const [showMenu, setShowMenu] = useState(false);
+  return (
+    <div
+      className={`group relative flex items-center gap-3 rounded-md px-4 py-3 cursor-pointer transition-colors
+        ${isCurrent ? "bg-[#282828]" : "hover:bg-[#282828]"}`}
+      onClick={onPlay}
+    >
+      {/* Album art */}
+      <div className="relative shrink-0 w-10 h-10 rounded overflow-hidden bg-[#333]">
+        <img src={song.cover_url || DEFAULT_COVER} alt={song.title} className="w-full h-full object-cover" />
+        <div className={`absolute inset-0 flex items-center justify-center bg-black/40 transition-opacity ${isCurrent ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+          {isCurrent ? <IconPause /> : <IconPlay />}
+        </div>
+      </div>
+
+      {/* Info */}
+      <div className="flex-1 min-w-0">
+        <p className={`truncate text-sm font-medium ${isCurrent ? "text-[#1DB954]" : "text-white"}`}>{song.title}</p>
+        <p className="truncate text-xs text-[#B3B3B3]">{song.artist}</p>
+      </div>
+
+      {/* Source badge */}
+      <IconSource type={song.source_type} />
+
+      {/* Add to playlist button */}
+      <div className="relative" onClick={(e) => e.stopPropagation()}>
+        <button
+          className="opacity-0 group-hover:opacity-100 p-1.5 rounded-full hover:bg-[#3E3E3E] text-[#B3B3B3] hover:text-white transition-all"
+          onClick={() => setShowMenu((v) => !v)}
+          title="Add to playlist"
+        >
+          <IconPlus />
+        </button>
+        {showMenu && (
+          <div className="absolute right-0 bottom-8 z-30 min-w-[180px] rounded-md bg-[#282828] shadow-xl border border-[#3E3E3E] py-1">
+            <p className="px-3 py-2 text-xs text-[#B3B3B3] font-semibold uppercase">Add to playlist</p>
+            {playlists.filter((p) => p.owner_id === userId).map((p) => (
+              <button
+                key={p.id}
+                className="w-full text-left px-3 py-2 text-sm text-white hover:bg-[#3E3E3E]"
+                onClick={() => { onAddToPlaylist(p.id); setShowMenu(false); }}
+              >
+                {p.name}
+              </button>
+            ))}
+            {playlists.filter((p) => p.owner_id === userId).length === 0 && (
+              <p className="px-3 py-2 text-xs text-[#6A6A6A]">No playlists yet</p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+export default function Home() {
+  if (!hasSupabaseEnv) {
+    return (
+      <main className="min-h-screen bg-[#121212] text-white flex items-center justify-center p-6">
+        <div className="w-full max-w-md rounded-2xl bg-[#181818] border border-[#333] p-8 space-y-3">
+          <div className="text-[#1DB954] text-4xl font-bold tracking-tight">tonal</div>
+          <p className="text-[#B3B3B3]">Missing Supabase environment variables.</p>
+          <p className="text-sm text-[#6A6A6A]">
+            Add <code className="bg-[#282828] px-1 rounded">NEXT_PUBLIC_SUPABASE_URL</code> and{" "}
+            <code className="bg-[#282828] px-1 rounded">NEXT_PUBLIC_SUPABASE_ANON_KEY</code> in <code className="bg-[#282828] px-1 rounded">.env.local</code>, then restart.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  // ── State ──
+  const [session, setSession] = useState<Session | null>(null);
+  const [activeTab, setActiveTab] = useState<Tab>("home");
+  const [mobileTab, setMobileTab] = useState<MobileTab>("home");
+  const [loading, setLoading] = useState(true);
+  const [songs, setSongs] = useState<DbSong[]>([]);
+  const [playlistQueue, setPlaylistQueue] = useState<DbSong[]>([]);
+  const [playlists, setPlaylists] = useState<DbPlaylist[]>([]);
+  const [selectedPlaylist, setSelectedPlaylist] = useState<PlaylistWithSongs | null>(null);
+  const [activePlaylistId, setActivePlaylistId] = useState<string | null>(null);
+  const [queueIndex, setQueueIndex] = useState(0);
+  const [search, setSearch] = useState("");
+  const [genreFilter, setGenreFilter] = useState("");
+  const [moodFilter, setMoodFilter] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [status, setStatus] = useState("");
+  const [nowPlaying, setNowPlaying] = useState<DbSong | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(0.8);
+  const [newPlaylistName, setNewPlaylistName] = useState("");
+  const [newPlaylistDescription, setNewPlaylistDescription] = useState("");
+  const [editingPlaylistName, setEditingPlaylistName] = useState("");
+  const [showNowPlayingExpanded, setShowNowPlayingExpanded] = useState(false);
+  const [showQueuePanel, setShowQueuePanel] = useState(false);
+  const [searchingExternal, setSearchingExternal] = useState(false);
+  const [externalResults, setExternalResults] = useState<ExternalSong[]>([]);
+  const [lyrics, setLyrics] = useState<string>("");
+  const [lyricsLoading, setLyricsLoading] = useState(false);
+  const [settings, setSettings] = useState<AppSettings>({
+    persistentQueueOrdering: true,
+    enableSwipeGestures: true,
+    enableNowPlayingView: true,
+  });
+  const [newSong, setNewSong] = useState({ title: "", artist: "", album: "", cover_url: "", stream_url: "", source_type: "direct", genre: "", mood: "", duration_seconds: "" });
+  // Swipe state
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [touchRowIndex, setTouchRowIndex] = useState<number | null>(null);
+
+  const playerRef = useRef<ReactPlayer>(null);
+  const nowPlayingExpandedRef = useRef<HTMLDivElement>(null);
+
+  // ── Swipe for expanded now playing ──
+  const npSwipeStart = useRef<number | null>(null);
+  const npSwipeStartY = useRef<number | null>(null);
+
+  // ── Effects ──
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session: s } }) => { setSession(s); setLoading(false); });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+      if (raw) setSettings((p) => ({ ...p, ...JSON.parse(raw) }));
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+  }, [settings]);
+
+  useEffect(() => {
+    if (!session) { setSongs([]); setPlaylistQueue([]); setPlaylists([]); setSelectedPlaylist(null); return; }
+    void Promise.all([loadSongs(), loadPlaylists()]);
+  }, [session]);
+
+  useEffect(() => {
+    if (!nowPlaying?.title || !nowPlaying.artist) { setLyrics(""); return; }
+    setLyricsLoading(true);
+    fetch(`https://api.lyrics.ovh/v1/${encodeURIComponent(nowPlaying.artist)}/${encodeURIComponent(nowPlaying.title)}`)
+      .then((r) => r.json())
+      .then((p: { lyrics?: string }) => setLyrics(p.lyrics || ""))
+      .catch(() => setLyrics(""))
+      .finally(() => setLyricsLoading(false));
+  }, [nowPlaying?.title, nowPlaying?.artist]);
+
+  // Dismiss status after 4s
+  useEffect(() => {
+    if (!status) return;
+    const t = setTimeout(() => setStatus(""), 4000);
+    return () => clearTimeout(t);
+  }, [status]);
+
+  // ── Data ──
+  async function loadSongs() {
+    const { data, error } = await supabase.from("songs").select("*").order("created_at", { ascending: false });
+    if (error) { setStatus(error.message); return; }
+    setSongs((data ?? []) as DbSong[]);
+    if (!nowPlaying && data && data.length > 0) { setNowPlaying(data[0] as DbSong); setQueueIndex(0); }
+  }
+
+  async function loadPlaylists() {
+    if (!session?.user.id) return;
+    const { data, error } = await supabase.from("playlists").select("*").or(`owner_id.eq.${session.user.id},is_public.eq.true`).order("created_at", { ascending: false });
+    if (error) { setStatus(error.message); return; }
+    setPlaylists((data ?? []) as DbPlaylist[]);
+  }
+
+  const filteredSongs = useMemo(() => songs.filter((s) => {
+    const matchesSearch = [s.title, s.artist, s.album ?? ""].join(" ").toLowerCase().includes(search.toLowerCase());
+    const matchesGenre = genreFilter ? s.genre === genreFilter : true;
+    const matchesMood = moodFilter ? s.mood === moodFilter : true;
+    return matchesSearch && matchesGenre && matchesMood;
+  }), [songs, search, genreFilter, moodFilter]);
+
+  const uniqueGenres = useMemo(() => Array.from(new Set(songs.map((s) => s.genre).filter(Boolean))).sort() as string[], [songs]);
+  const uniqueMoods = useMemo(() => Array.from(new Set(songs.map((s) => s.mood).filter(Boolean))).sort() as string[], [songs]);
+  const queue = activePlaylistId ? playlistQueue : filteredSongs;
+
+  useEffect(() => {
+    if (!nowPlaying && queue.length > 0) { setNowPlaying(queue[0]); setQueueIndex(0); }
+  }, [queue, nowPlaying]);
+
+  // ── Auth ──
+  async function signInOrSignUp(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault(); setStatus("");
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    if (!signInError) { setStatus("Signed in."); return; }
+    const { error: signUpError } = await supabase.auth.signUp({ email, password });
+    if (signUpError) setStatus(signUpError.message);
+    else setStatus("Account created. Check email if confirmation is enabled.");
+  }
+
+  async function signOut() {
+    await supabase.auth.signOut();
+    setStatus("Signed out.");
+    setNowPlaying(null);
+    setIsPlaying(false);
+  }
+
+  // ── Playlist CRUD ──
+  async function createPlaylist(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!session?.user.id || !newPlaylistName.trim()) return;
+    const { error } = await supabase.from("playlists").insert({ name: newPlaylistName.trim(), description: newPlaylistDescription || null, owner_id: session.user.id, is_public: true });
+    if (error) { setStatus(error.message); return; }
+    setNewPlaylistName(""); setNewPlaylistDescription("");
+    setStatus("Playlist created.");
+    await loadPlaylists();
+  }
+
+  async function getNextPlaylistPosition(playlistId: string): Promise<number> {
+    const { data } = await supabase.from("playlist_songs").select("position").eq("playlist_id", playlistId).order("position", { ascending: false }).limit(1);
+    return data && data.length > 0 ? (data[0].position ?? -1) + 1 : 0;
+  }
+
+  async function persistPlaylistOrder(playlistId: string, orderedSongs: DbSong[]) {
+    if (!settings.persistentQueueOrdering) return;
+    await Promise.all(orderedSongs.map((s, i) => supabase.from("playlist_songs").update({ position: i }).eq("playlist_id", playlistId).eq("song_id", s.id)));
+  }
+
+  async function addSongToPlaylist(songId: string, playlistId: string) {
+    const position = await getNextPlaylistPosition(playlistId);
+    const { error } = await supabase.from("playlist_songs").insert({ song_id: songId, playlist_id: playlistId, position });
+    if (error) { setStatus(error.message); return; }
+    setStatus("Added to playlist.");
+    if (selectedPlaylist?.id === playlistId) await openPlaylist(playlistId);
+  }
+
+  async function openPlaylist(playlistId: string) {
+    const selected = playlists.find((p) => p.id === playlistId) ?? null;
+    setSelectedPlaylist(selected ? { ...selected, songs: [] } : null);
+    setEditingPlaylistName(selected?.name ?? "");
+    const { data, error } = await supabase.from("playlist_songs").select("song_id, position, added_at").eq("playlist_id", playlistId).order(settings.persistentQueueOrdering ? "position" : "added_at", { ascending: true });
+    if (error) { setStatus(error.message); return; }
+    const songIds = (data ?? []).map((item) => item.song_id);
+    if (songIds.length === 0) {
+      setActivePlaylistId(playlistId); setPlaylistQueue([]); setActiveTab("library");
+      if (selected) setSelectedPlaylist({ ...selected, songs: [] });
+      return;
+    }
+    const { data: songRows, error: songError } = await supabase.from("songs").select("*").in("id", songIds);
+    if (songError) { setStatus(songError.message); return; }
+    const songMap = new Map((songRows ?? []).map((s) => [s.id, s as DbSong]));
+    const loadedSongs = songIds.map((id) => songMap.get(id)).filter(Boolean) as DbSong[];
+    setActivePlaylistId(playlistId); setPlaylistQueue(loadedSongs);
+    if (selected) setSelectedPlaylist({ ...selected, songs: loadedSongs });
+    if (loadedSongs.length > 0) { setNowPlaying(loadedSongs[0]); setQueueIndex(0); }
+    setActiveTab("library");
+  }
+
+  async function removeSongFromPlaylist(songId: string) {
+    if (!selectedPlaylist) return;
+    const { error } = await supabase.from("playlist_songs").delete().eq("playlist_id", selectedPlaylist.id).eq("song_id", songId);
+    if (error) { setStatus(error.message); return; }
+    setStatus("Removed from playlist.");
+    await openPlaylist(selectedPlaylist.id);
+  }
+
+  async function updatePlaylistName(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!selectedPlaylist || !editingPlaylistName.trim()) return;
+    const { error } = await supabase.from("playlists").update({ name: editingPlaylistName.trim() }).eq("id", selectedPlaylist.id);
+    if (error) { setStatus(error.message); return; }
+    setStatus("Playlist renamed.");
+    await loadPlaylists(); await openPlaylist(selectedPlaylist.id);
+  }
+
+  async function deletePlaylist() {
+    if (!selectedPlaylist) return;
+    const { error } = await supabase.from("playlists").delete().eq("id", selectedPlaylist.id);
+    if (error) { setStatus(error.message); return; }
+    setStatus("Playlist deleted.");
+    setSelectedPlaylist(null); setActivePlaylistId(null); setPlaylistQueue([]);
+    await loadPlaylists();
+  }
+
+  function moveQueueItem(from: number, to: number) {
+    if (from < 0 || to < 0 || from >= queue.length || to >= queue.length || from === to) return;
+    const next = [...queue];
+    const [item] = next.splice(from, 1);
+    next.splice(to, 0, item);
+    setPlaylistQueue(next);
+    setSelectedPlaylist((p) => p && p.id === activePlaylistId ? { ...p, songs: next } : p);
+    if (nowPlaying) { const idx = next.findIndex((s) => s.id === nowPlaying.id); setQueueIndex(idx >= 0 ? idx : 0); }
+    if (activePlaylistId) void persistPlaylistOrder(activePlaylistId, next);
+  }
+
+  function removeFromQueue(index: number) {
+    if (index < 0 || index >= queue.length) return;
+    const target = queue[index];
+    const next = queue.filter((_, i) => i !== index);
+    setPlaylistQueue(next);
+    setSelectedPlaylist((p) => p && p.id === activePlaylistId ? { ...p, songs: next } : p);
+    if (nowPlaying?.id === target.id) { const fallback = next[index] ?? next[index - 1] ?? null; setNowPlaying(fallback); setQueueIndex(Math.max(0, index - 1)); }
+    else if (nowPlaying) { const newIdx = next.findIndex((s) => s.id === nowPlaying.id); setQueueIndex(newIdx >= 0 ? newIdx : 0); }
+    if (activePlaylistId) void persistPlaylistOrder(activePlaylistId, next);
+  }
+
+  // ── Queue swipe (list rows) ──
+  function handleQueueTouchStart(index: number, clientX: number) {
+    if (!settings.enableSwipeGestures) return;
+    setTouchStartX(clientX); setTouchRowIndex(index);
+  }
+  function handleQueueTouchEnd(index: number, clientX: number) {
+    if (!settings.enableSwipeGestures || touchStartX === null || touchRowIndex !== index) return;
+    const dx = clientX - touchStartX;
+    if (dx <= -70) removeFromQueue(index);
+    else if (dx >= 70 && queue[index]) playSong(queue[index]);
+    setTouchStartX(null); setTouchRowIndex(null);
+  }
+
+  // ── Export ──
+  function exportSelectedPlaylistJson() {
+    if (!selectedPlaylist) return;
+    downloadTextFile(`${selectedPlaylist.name.replace(/\s+/g, "_").toLowerCase()}.json`, JSON.stringify({ name: selectedPlaylist.name, description: selectedPlaylist.description, songs: selectedPlaylist.songs, exported_at: new Date().toISOString(), source: "tonal", format_version: 1 }, null, 2), "application/json");
+  }
+  function exportSelectedPlaylistM3u() {
+    if (!selectedPlaylist) return;
+    const rows = ["#EXTM3U"];
+    for (const s of selectedPlaylist.songs) { rows.push(`#EXTINF:${s.duration_seconds ?? -1},${s.artist} - ${s.title}`); rows.push(s.stream_url); }
+    downloadTextFile(`${selectedPlaylist.name.replace(/\s+/g, "_").toLowerCase()}.m3u`, rows.join("\n"), "audio/x-mpegurl");
+  }
+
+  // ── Import ──
+  async function handlePlaylistImport(e: ChangeEvent<HTMLInputElement>) {
+    if (!session?.user.id) return;
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const content = await file.text();
+    const lower = file.name.toLowerCase();
+    let importedName = file.name.replace(/\.(json|m3u|m3u8|csv|txt)$/i, "");
+    let importedSongs: Partial<DbSong>[] = [];
+    if (lower.endsWith(".json")) { const p = JSON.parse(content) as PlaylistImportPayload; importedName = p.name || importedName; importedSongs = p.songs ?? []; }
+    else if (lower.endsWith(".m3u") || lower.endsWith(".m3u8")) { importedSongs = parseM3uSongs(content); }
+    else if (lower.endsWith(".csv") || lower.endsWith(".txt")) { importedSongs = parseCsvOrTxtSongs(content); }
+    else { setStatus("Unsupported file. Use JSON, M3U, CSV, or TXT."); return; }
+
+    const { data: plData, error: plError } = await supabase.from("playlists").insert({ name: importedName, description: "Imported playlist", owner_id: session.user.id, is_public: true }).select("id").single();
+    if (plError || !plData?.id) { setStatus(plError?.message ?? "Failed to create playlist."); return; }
+
+    let added = 0; let skipped = 0; let position = 0;
+    for (const rawSong of importedSongs) {
+      const song = await resolveImportedSongUrl(rawSong);
+      if (!song?.stream_url) { skipped++; continue; }
+      const srcType = song.source_type || (toYouTubeEmbedUrl(song.stream_url) ? "youtube" : "direct");
+      const normalizedUrl = srcType === "youtube" ? toYouTubeEmbedUrl(song.stream_url) ?? song.stream_url : song.stream_url;
+      let songId: string | null = null;
+      const existing = await supabase.from("songs").select("id").eq("stream_url", normalizedUrl).maybeSingle();
+      if (!existing.error && existing.data?.id) { songId = existing.data.id; }
+      else {
+        const ins = await supabase.from("songs").insert({ title: song.title || "Imported Track", artist: song.artist || "Unknown Artist", album: song.album || null, cover_url: song.cover_url || null, stream_url: normalizedUrl, source_type: srcType, genre: song.genre || null, mood: song.mood || null, duration_seconds: song.duration_seconds || null, uploaded_by: session.user.id }).select("id").single();
+        if (!ins.error && ins.data?.id) songId = ins.data.id;
+      }
+      if (songId) { await supabase.from("playlist_songs").upsert({ playlist_id: plData.id, song_id: songId, position }); position++; added++; }
+      else skipped++;
+    }
+    setStatus(`Imported "${importedName}" — ${added} tracks added, ${skipped} skipped.`);
+    await loadSongs(); await loadPlaylists(); await openPlaylist(plData.id);
+  }
+
+  // ── External search ──
+  async function saveExternalResult(result: ExternalSong) {
+    if (!session?.user.id) return;
+    const normalizedStream = result.sourceType === "youtube" ? toYouTubeEmbedUrl(result.streamUrl) ?? result.streamUrl : result.streamUrl;
+    const { data: existing } = await supabase.from("songs").select("*").eq("stream_url", normalizedStream).maybeSingle();
+    if (existing) { playSong(existing as DbSong); setStatus("Already in library — playing now."); return; }
+    const { data, error } = await supabase.from("songs").insert({ title: result.title, artist: result.artist, album: result.album || null, cover_url: result.coverUrl || null, stream_url: normalizedStream, source_type: result.sourceType, uploaded_by: session.user.id }).select("*").single();
+    if (error || !data) { setStatus(error?.message || "Could not save track."); return; }
+    setSongs((c) => [data as DbSong, ...c]);
+    playSong(data as DbSong);
+    setStatus("Track added from external search.");
+  }
+
+  async function runExternalSearch() {
+    const query = search.trim();
+    if (!query) { setExternalResults([]); return; }
+    setSearchingExternal(true);
+    try {
+      const [yt, it, jm] = await Promise.all([searchYouTubeSongs(query), searchITunesSongs(query), searchJamendoSongs(query)]);
+      const merged = [...jm, ...it, ...yt];
+      setExternalResults(merged.filter((s, i) => merged.findIndex((o) => o.streamUrl === s.streamUrl) === i));
+    } catch { setStatus("External search failed."); }
+    finally { setSearchingExternal(false); }
+  }
+
+  // ── Upload ──
+  async function uploadSong(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!session?.user.id || !newSong.title.trim() || !newSong.stream_url.trim()) return;
+    const srcType = newSong.source_type === "youtube" ? "youtube" : "direct";
+    const streamUrl = srcType === "youtube" ? toYouTubeEmbedUrl(newSong.stream_url) ?? newSong.stream_url : newSong.stream_url;
+    const { error } = await supabase.from("songs").insert({ title: newSong.title, artist: newSong.artist || "Unknown Artist", album: newSong.album || null, cover_url: newSong.cover_url || null, stream_url: streamUrl, source_type: srcType, genre: newSong.genre || null, mood: newSong.mood || null, duration_seconds: newSong.duration_seconds ? Number(newSong.duration_seconds) : null, uploaded_by: session.user.id });
+    if (error) { setStatus(error.message); return; }
+    setNewSong({ title: "", artist: "", album: "", cover_url: "", stream_url: "", source_type: "direct", genre: "", mood: "", duration_seconds: "" });
+    setStatus("Track added to catalog.");
+    await loadSongs();
+    setActiveTab("home");
+  }
+
+  // ── Playback ──
+  function playSong(song: DbSong) {
+    const idx = queue.findIndex((q) => q.id === song.id);
+    setNowPlaying(song); setQueueIndex(idx >= 0 ? idx : 0); setIsPlaying(true);
+  }
+  function playNext() {
+    if (!queue.length) return;
+    const next = (queueIndex + 1) % queue.length;
+    setQueueIndex(next); setNowPlaying(queue[next]); setIsPlaying(true);
+  }
+  function playPrevious() {
+    if (!queue.length) return;
+    // If more than 3s in, restart; else go to previous
+    if (currentTime > 3) { playerRef.current?.seekTo(0); return; }
+    const prev = (queueIndex - 1 + queue.length) % queue.length;
+    setQueueIndex(prev); setNowPlaying(queue[prev]); setIsPlaying(true);
+  }
+
+  // ── Expanded NowPlaying swipe ──
+  function onNPTouchStart(e: React.TouchEvent) {
+    npSwipeStart.current = e.touches[0].clientX;
+    npSwipeStartY.current = e.touches[0].clientY;
+  }
+  function onNPTouchEnd(e: React.TouchEvent) {
+    if (npSwipeStart.current === null || npSwipeStartY.current === null) return;
+    const dx = e.changedTouches[0].clientX - npSwipeStart.current;
+    const dy = e.changedTouches[0].clientY - npSwipeStartY.current;
+    if (Math.abs(dy) > 80 && dy > 0 && Math.abs(dy) > Math.abs(dx)) setShowNowPlayingExpanded(false);
+    else if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) {
+      if (dx < 0) playNext(); else playPrevious();
+    }
+    npSwipeStart.current = null; npSwipeStartY.current = null;
+  }
+
+  // ── Derived ──
+  const streamUrl = nowPlaying ? (nowPlaying.source_type === "youtube" ? toYouTubeEmbedUrl(nowPlaying.stream_url) ?? undefined : nowPlaying.stream_url) : undefined;
+
+  // ── Loading / Auth screens ──
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-[#121212] text-white flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="text-[#1DB954] text-3xl font-bold">tonal</div>
+          <div className="w-8 h-8 border-2 border-[#1DB954] border-t-transparent rounded-full animate-spin" />
+        </div>
+      </main>
+    );
+  }
+
+  if (!session) {
+    return (
+      <main className="min-h-screen bg-[#121212] text-white flex items-center justify-center p-6">
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-10">
+            <div className="text-[#1DB954] text-5xl font-black tracking-tight mb-2">tonal</div>
+            <p className="text-[#B3B3B3] text-sm">Sign in to start listening</p>
+          </div>
+          <form className="space-y-3" onSubmit={signInOrSignUp}>
+            <input
+              className="w-full rounded-full bg-[#2A2A2A] border border-[#3E3E3E] px-4 py-3 text-white placeholder-[#6A6A6A] focus:outline-none focus:border-white transition-colors"
+              type="email" placeholder="Email address" value={email}
+              onChange={(e) => setEmail(e.target.value)} required
+            />
+            <input
+              className="w-full rounded-full bg-[#2A2A2A] border border-[#3E3E3E] px-4 py-3 text-white placeholder-[#6A6A6A] focus:outline-none focus:border-white transition-colors"
+              type="password" placeholder="Password" minLength={6} value={password}
+              onChange={(e) => setPassword(e.target.value)} required
+            />
+            <button className="w-full rounded-full bg-[#1DB954] hover:bg-[#1ed760] text-black font-bold py-3 transition-colors" type="submit">
+              Continue
+            </button>
+            {status && <p className="text-center text-sm text-[#B3B3B3]">{status}</p>}
+          </form>
+          <p className="text-center text-xs text-[#6A6A6A] mt-6">New here? Submitting will create your account.</p>
+        </div>
+      </main>
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // MAIN APP SHELL
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  // Resolve which tab to show on desktop
+  const desktopActiveTab: Tab = activeTab;
+
+  // Map mobile tab to desktop tab
+  const effectiveTab: Tab = (() => {
+    if (mobileTab === "home") return "home";
+    if (mobileTab === "search") return "search";
+    if (mobileTab === "library") return "library";
+    return desktopActiveTab;
+  })();
+
+  const inputCls = "w-full rounded-md bg-[#2A2A2A] border border-transparent focus:border-[#B3B3B3] px-3 py-2 text-sm text-white placeholder-[#6A6A6A] outline-none transition-colors";
+
+  return (
+    <div className="flex flex-col h-screen bg-[#121212] text-white overflow-hidden">
+
+      {/* ── Toast status ── */}
+      {status && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-[#282828] text-white text-sm px-4 py-2.5 rounded-full shadow-xl border border-[#3E3E3E] pointer-events-none animate-fade-in">
+          {status}
+        </div>
+      )}
+
+      {/* ── BODY (sidebar + main) ── */}
+      <div className="flex flex-1 overflow-hidden">
+
+        {/* ════ SIDEBAR (desktop only) ════ */}
+        <aside className="hidden md:flex w-[240px] flex-col bg-black shrink-0 overflow-hidden">
+          {/* Logo */}
+          <div className="px-6 pt-6 pb-2">
+            <div className="text-[#1DB954] text-2xl font-black tracking-tight">tonal</div>
+          </div>
+
+          {/* Nav */}
+          <nav className="px-3 mt-2 space-y-1">
+            {([
+              { id: "home", label: "Home", Icon: () => <IconHome filled={desktopActiveTab === "home"} /> },
+              { id: "search", label: "Search", Icon: IconSearch },
+              { id: "library", label: "Your Library", Icon: IconLibrary },
+            ] as { id: Tab; label: string; Icon: () => JSX.Element }[]).map(({ id, label, Icon }) => (
+              <button
+                key={id}
+                className={`flex items-center gap-4 w-full px-3 py-2 rounded-md text-sm font-semibold transition-colors
+                  ${desktopActiveTab === id ? "text-white" : "text-[#B3B3B3] hover:text-white"}`}
+                onClick={() => setActiveTab(id)}
+              >
+                <Icon />
+                {label}
+              </button>
+            ))}
+          </nav>
+
+          {/* Divider */}
+          <div className="mt-4 mx-4 border-t border-[#282828]" />
+
+          {/* Playlists */}
+          <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1">
+            <div className="flex items-center justify-between px-3 py-1">
+              <span className="text-xs font-semibold uppercase text-[#B3B3B3] tracking-widest">Playlists</span>
+              <button
+                className="text-[#B3B3B3] hover:text-white p-1 rounded hover:bg-[#282828] transition-colors"
+                onClick={() => setActiveTab("library")}
+                title="New playlist"
+              >
+                <IconPlus />
+              </button>
+            </div>
+
+            {playlists.map((playlist) => (
+              <button
+                key={playlist.id}
+                className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors
+                  ${selectedPlaylist?.id === playlist.id ? "bg-[#282828] text-white" : "text-[#B3B3B3] hover:text-white hover:bg-[#1A1A1A]"}`}
+                onClick={() => void openPlaylist(playlist.id)}
+              >
+                <div className="flex items-center gap-2">
+                  <IconNote />
+                  <span className="truncate">{playlist.name}</span>
+                </div>
+              </button>
+            ))}
+
+            {playlists.length === 0 && (
+              <p className="px-3 py-2 text-xs text-[#6A6A6A]">No playlists yet. Create one in Your Library.</p>
+            )}
+          </div>
+
+          {/* User info */}
+          <div className="px-3 py-3 border-t border-[#282828]">
+            <button
+              className="flex items-center gap-2 w-full px-3 py-2 rounded-md text-sm text-[#B3B3B3] hover:text-white hover:bg-[#282828] transition-colors"
+              onClick={signOut}
+            >
+              <IconLogout />
+              <span className="truncate">{session.user.email}</span>
+            </button>
+          </div>
+        </aside>
+
+        {/* ════ MAIN CONTENT ════ */}
+        <main className="flex-1 overflow-y-auto bg-gradient-to-b from-[#1a1a1a] to-[#121212]">
+          <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 pb-32 md:pb-8">
+
+            {/* ── HOME tab ── */}
+            {(effectiveTab === "home") && (
+              <div className="space-y-6">
+                <div>
+                  <h1 className="text-3xl font-bold text-white mb-1">Good listening</h1>
+                  <p className="text-[#B3B3B3] text-sm">{songs.length} tracks in your library</p>
+                </div>
+
+                {/* Filter bar */}
+                <div className="flex flex-wrap gap-2">
+                  <input
+                    className="flex-1 min-w-[200px] rounded-full bg-[#282828] border border-transparent focus:border-[#B3B3B3] px-4 py-2 text-sm text-white placeholder-[#6A6A6A] outline-none"
+                    placeholder="Filter by title, artist, album…"
+                    value={search} onChange={(e) => setSearch(e.target.value)}
+                  />
+                  {uniqueGenres.length > 0 && (
+                    <select className="rounded-full bg-[#282828] px-3 py-2 text-sm text-[#B3B3B3] outline-none border border-transparent focus:border-[#B3B3B3]" value={genreFilter} onChange={(e) => setGenreFilter(e.target.value)}>
+                      <option value="">All genres</option>
+                      {uniqueGenres.map((g) => <option key={g} value={g}>{g}</option>)}
+                    </select>
+                  )}
+                  {uniqueMoods.length > 0 && (
+                    <select className="rounded-full bg-[#282828] px-3 py-2 text-sm text-[#B3B3B3] outline-none border border-transparent focus:border-[#B3B3B3]" value={moodFilter} onChange={(e) => setMoodFilter(e.target.value)}>
+                      <option value="">All moods</option>
+                      {uniqueMoods.map((m) => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                  )}
+                </div>
+
+                {/* Song list */}
+                {filteredSongs.length === 0 ? (
+                  <div className="text-center py-20 text-[#6A6A6A]">
+                    <p className="text-lg mb-2">No tracks found</p>
+                    <p className="text-sm">Try the Search tab to find music on YouTube, iTunes, or Jamendo.</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-[#282828] rounded-lg overflow-hidden bg-[#181818]">
+                    {/* Header row */}
+                    <div className="grid grid-cols-[auto_1fr_auto] gap-3 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-[#6A6A6A]">
+                      <span className="w-10">#</span>
+                      <span>Title</span>
+                      <span>Source</span>
+                    </div>
+                    {filteredSongs.map((song, idx) => {
+                      const isCurrent = nowPlaying?.id === song.id;
+                      return (
+                        <div
+                          key={song.id}
+                          className={`group flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${isCurrent ? "bg-[#282828]" : "hover:bg-[#282828]"}`}
+                          onClick={() => playSong(song)}
+                        >
+                          {/* Index / play indicator */}
+                          <div className="w-10 text-center text-sm shrink-0">
+                            <span className={`group-hover:hidden ${isCurrent ? "hidden" : ""} text-[#B3B3B3]`}>{idx + 1}</span>
+                            <span className={`hidden group-hover:inline ${isCurrent ? "!inline text-[#1DB954]" : ""}`}>
+                              {isPlaying && isCurrent ? <IconPause /> : <IconPlay />}
+                            </span>
+                          </div>
+
+                          {/* Album art */}
+                          <div className="w-10 h-10 rounded shrink-0 overflow-hidden bg-[#333]">
+                            <img src={song.cover_url || DEFAULT_COVER} alt={song.title} className="w-full h-full object-cover" />
+                          </div>
+
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <p className={`truncate text-sm font-medium ${isCurrent ? "text-[#1DB954]" : "text-white"}`}>{song.title}</p>
+                            <p className="truncate text-xs text-[#B3B3B3]">{song.artist}</p>
+                          </div>
+
+                          {/* Source + add */}
+                          <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                            <IconSource type={song.source_type} />
+                            <div className="relative group/menu">
+                              <button
+                                className="opacity-0 group-hover:opacity-100 text-[#B3B3B3] hover:text-white p-1 rounded transition-all"
+                                onClick={(e) => { e.stopPropagation(); }}
+                              >
+                                <IconPlus />
+                              </button>
+                              <div className="absolute right-0 bottom-8 hidden group-hover/menu:block z-30 min-w-[180px] rounded-md bg-[#282828] shadow-xl border border-[#3E3E3E] py-1">
+                                <p className="px-3 py-2 text-xs text-[#B3B3B3] font-semibold uppercase">Add to playlist</p>
+                                {playlists.filter((p) => p.owner_id === session.user.id).map((p) => (
+                                  <button key={p.id} className="w-full text-left px-3 py-2 text-sm text-white hover:bg-[#3E3E3E]" onClick={() => void addSongToPlaylist(song.id, p.id)}>
+                                    {p.name}
+                                  </button>
+                                ))}
+                                {playlists.filter((p) => p.owner_id === session.user.id).length === 0 && (
+                                  <p className="px-3 py-2 text-xs text-[#6A6A6A]">No playlists yet</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── SEARCH tab ── */}
+            {effectiveTab === "search" && (
+              <div className="space-y-6">
+                <h1 className="text-3xl font-bold">Search</h1>
+                <div className="flex gap-2">
+                  <input
+                    className="flex-1 rounded-full bg-white text-black px-5 py-3 text-sm outline-none placeholder-gray-500"
+                    placeholder="Artists, songs, or anything…"
+                    value={search} onChange={(e) => setSearch(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && void runExternalSearch()}
+                  />
+                  <button
+                    className="rounded-full bg-[#1DB954] hover:bg-[#1ed760] text-black font-bold px-5 py-3 text-sm transition-colors whitespace-nowrap"
+                    onClick={() => void runExternalSearch()}
+                  >
+                    {searchingExternal ? "Searching…" : "Search all sources"}
+                  </button>
+                </div>
+
+                {/* Library results */}
+                {filteredSongs.length > 0 && (
+                  <div>
+                    <h2 className="text-lg font-bold mb-3 text-[#B3B3B3]">In your library</h2>
+                    <div className="divide-y divide-[#282828] rounded-lg overflow-hidden bg-[#181818]">
+                      {filteredSongs.slice(0, 5).map((song) => {
+                        const isCurrent = nowPlaying?.id === song.id;
+                        return (
+                          <SongCard
+                            key={song.id} song={song} isCurrent={isCurrent}
+                            playlists={playlists} onPlay={() => playSong(song)}
+                            onAddToPlaylist={(pid) => void addSongToPlaylist(song.id, pid)}
+                            userId={session.user.id}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* External results */}
+                {externalResults.length > 0 && (
+                  <div>
+                    <h2 className="text-lg font-bold mb-3 text-[#B3B3B3]">From the web</h2>
+                    <div className="divide-y divide-[#282828] rounded-lg overflow-hidden bg-[#181818]">
+                      {externalResults.map((result, index) => (
+                        <div key={`${result.streamUrl}-${index}`} className="flex items-center gap-3 px-4 py-3 hover:bg-[#282828] transition-colors">
+                          {result.coverUrl && <img src={result.coverUrl} alt={result.title} className="w-10 h-10 rounded object-cover shrink-0 bg-[#333]" />}
+                          {!result.coverUrl && <div className="w-10 h-10 rounded bg-[#333] shrink-0 flex items-center justify-center text-[#6A6A6A]"><IconNote /></div>}
+                          <div className="flex-1 min-w-0">
+                            <p className="truncate text-sm font-medium text-white">{result.title}</p>
+                            <p className="truncate text-xs text-[#B3B3B3]">{result.artist} · {result.sourceType === "youtube" ? "YouTube" : result.album || "Stream"}</p>
+                          </div>
+                          <button
+                            className="shrink-0 rounded-full bg-[#1DB954] hover:bg-[#1ed760] text-black text-xs font-bold px-4 py-1.5 transition-colors"
+                            onClick={() => void saveExternalResult(result)}
+                          >
+                            Add
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {!search && externalResults.length === 0 && (
+                  <div className="text-center py-16 text-[#6A6A6A]">
+                    <IconSearch />
+                    <p className="mt-4 text-lg">Search YouTube, iTunes &amp; Jamendo</p>
+                    <p className="text-sm mt-1">Type something and hit Enter or click Search</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── LIBRARY tab ── */}
+            {effectiveTab === "library" && (
+              <div className="space-y-6">
+                <h1 className="text-3xl font-bold">Your Library</h1>
+
+                {/* Create + Import row */}
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="rounded-xl bg-[#181818] p-4 space-y-3">
+                    <h3 className="font-semibold text-sm text-[#B3B3B3] uppercase tracking-wider">New Playlist</h3>
+                    <form className="space-y-2" onSubmit={createPlaylist}>
+                      <input className={inputCls} placeholder="Playlist name" value={newPlaylistName} onChange={(e) => setNewPlaylistName(e.target.value)} required />
+                      <input className={inputCls} placeholder="Description (optional)" value={newPlaylistDescription} onChange={(e) => setNewPlaylistDescription(e.target.value)} />
+                      <button className="w-full rounded-full bg-white text-black font-bold text-sm py-2 hover:bg-[#E0E0E0] transition-colors" type="submit">
+                        Create
+                      </button>
+                    </form>
+                  </div>
+
+                  <div className="rounded-xl bg-[#181818] p-4 space-y-3">
+                    <h3 className="font-semibold text-sm text-[#B3B3B3] uppercase tracking-wider">Import / Export</h3>
+                    <p className="text-xs text-[#6A6A6A]">Supports JSON, M3U/M3U8, CSV, TXT. Tracks without URLs are auto-resolved.</p>
+                    <label className="block rounded-full bg-[#282828] hover:bg-[#3E3E3E] text-white text-sm font-medium py-2 px-4 text-center cursor-pointer transition-colors">
+                      Import playlist file
+                      <input className="hidden" type="file" accept=".json,.m3u,.m3u8,.csv,.txt" onChange={(e) => void handlePlaylistImport(e)} />
+                    </label>
+                    {selectedPlaylist && (
+                      <div className="flex gap-2">
+                        <button className="flex-1 rounded-full bg-[#282828] hover:bg-[#3E3E3E] text-white text-sm py-2 transition-colors" onClick={exportSelectedPlaylistJson}>Export JSON</button>
+                        <button className="flex-1 rounded-full bg-[#282828] hover:bg-[#3E3E3E] text-white text-sm py-2 transition-colors" onClick={exportSelectedPlaylistM3u}>Export M3U</button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Playlist list */}
+                {!selectedPlaylist && (
+                  <div className="space-y-2">
+                    <h2 className="text-lg font-bold">Playlists</h2>
+                    {playlists.length === 0 ? (
+                      <p className="text-[#6A6A6A] text-sm py-8 text-center">No playlists yet — create one above.</p>
+                    ) : (
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {playlists.map((playlist) => (
+                          <button
+                            key={playlist.id}
+                            className="flex items-center gap-3 p-3 rounded-lg bg-[#181818] hover:bg-[#282828] transition-colors text-left"
+                            onClick={() => void openPlaylist(playlist.id)}
+                          >
+                            <div className="w-12 h-12 rounded bg-gradient-to-br from-[#1DB954] to-[#145E2F] flex items-center justify-center shrink-0">
+                              <IconNote />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="truncate font-medium text-white">{playlist.name}</p>
+                              <p className="text-xs text-[#B3B3B3]">{playlist.owner_id === session.user.id ? "Your playlist" : "Public"}</p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Selected playlist */}
+                {selectedPlaylist && (
+                  <div className="space-y-4">
+                    {/* Playlist header */}
+                    <div className="flex items-start gap-4">
+                      <div className="w-32 h-32 rounded-lg bg-gradient-to-br from-[#1DB954] to-[#145E2F] flex items-center justify-center shrink-0 text-4xl">
+                        🎵
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <form className="space-y-2" onSubmit={updatePlaylistName}>
+                          <input
+                            className="bg-transparent text-3xl font-bold text-white outline-none border-b border-transparent focus:border-[#B3B3B3] w-full transition-colors"
+                            value={editingPlaylistName} onChange={(e) => setEditingPlaylistName(e.target.value)}
+                          />
+                          <div className="flex gap-2 flex-wrap mt-2">
+                            <button className="rounded-full bg-[#1DB954] hover:bg-[#1ed760] text-black font-bold text-sm px-4 py-1.5 transition-colors" type="submit">Save name</button>
+                            <button className="rounded-full bg-[#282828] hover:bg-[#3E3E3E] text-white text-sm px-4 py-1.5 transition-colors" type="button" onClick={() => void openPlaylist(selectedPlaylist.id)}>
+                              ▶ Play all
+                            </button>
+                            <button className="rounded-full bg-red-600/30 hover:bg-red-600/50 text-red-400 text-sm px-4 py-1.5 transition-colors" type="button" onClick={() => void deletePlaylist()}>Delete</button>
+                            <button className="rounded-full bg-[#282828] hover:bg-[#3E3E3E] text-[#B3B3B3] text-sm px-4 py-1.5 transition-colors" type="button" onClick={() => setSelectedPlaylist(null)}>← Back</button>
+                          </div>
+                        </form>
+                        <p className="text-[#B3B3B3] text-sm mt-1">{selectedPlaylist.songs.length} tracks</p>
+                      </div>
+                    </div>
+
+                    {/* Song rows */}
+                    {selectedPlaylist.songs.length === 0 ? (
+                      <p className="text-[#6A6A6A] text-sm py-8 text-center">No songs in this playlist yet.</p>
+                    ) : (
+                      <div className="divide-y divide-[#282828] rounded-lg overflow-hidden bg-[#181818]">
+                        {selectedPlaylist.songs.map((song, index) => {
+                          const isCurrent = nowPlaying?.id === song.id;
+                          return (
+                            <div
+                              key={song.id}
+                              className={`group flex items-center gap-3 px-4 py-3 transition-colors ${isCurrent ? "bg-[#282828]" : "hover:bg-[#282828]"}`}
+                              onTouchStart={(e) => handleQueueTouchStart(index, e.changedTouches[0].clientX)}
+                              onTouchEnd={(e) => handleQueueTouchEnd(index, e.changedTouches[0].clientX)}
+                            >
+                              <span className="w-6 text-xs text-[#6A6A6A] text-center shrink-0">{index + 1}</span>
+                              <div className="w-10 h-10 rounded overflow-hidden shrink-0 bg-[#333]">
+                                <img src={song.cover_url || DEFAULT_COVER} alt={song.title} className="w-full h-full object-cover" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className={`truncate text-sm font-medium ${isCurrent ? "text-[#1DB954]" : "text-white"}`}>{song.title}</p>
+                                <p className="truncate text-xs text-[#B3B3B3]">{song.artist}</p>
+                              </div>
+                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                <button className="p-1 text-[#1DB954] hover:text-white rounded hover:bg-[#3E3E3E]" onClick={() => playSong(song)} title="Play"><IconPlay /></button>
+                                <button className="px-2 py-1 text-xs text-[#B3B3B3] hover:text-white rounded hover:bg-[#3E3E3E] disabled:opacity-30" onClick={() => moveQueueItem(index, index - 1)} disabled={index === 0}>↑</button>
+                                <button className="px-2 py-1 text-xs text-[#B3B3B3] hover:text-white rounded hover:bg-[#3E3E3E] disabled:opacity-30" onClick={() => moveQueueItem(index, index + 1)} disabled={index === selectedPlaylist.songs.length - 1}>↓</button>
+                                <button className="px-2 py-1 text-xs text-red-400 hover:text-red-300 rounded hover:bg-[#3E3E3E]" onClick={() => void removeSongFromPlaylist(song.id)}>✕</button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── UPLOAD tab ── */}
+            {activeTab === "upload" && (
+              <div className="space-y-6">
+                <h1 className="text-3xl font-bold">Add Track</h1>
+                <div className="rounded-xl bg-[#181818] p-6">
+                  <form className="grid gap-3 sm:grid-cols-2" onSubmit={uploadSong}>
+                    <input className={inputCls} placeholder="Title *" required value={newSong.title} onChange={(e) => setNewSong({ ...newSong, title: e.target.value })} />
+                    <input className={inputCls} placeholder="Artist" value={newSong.artist} onChange={(e) => setNewSong({ ...newSong, artist: e.target.value })} />
+                    <input className={inputCls} placeholder="Album" value={newSong.album} onChange={(e) => setNewSong({ ...newSong, album: e.target.value })} />
+                    <input className={inputCls} placeholder="Cover image URL" value={newSong.cover_url} onChange={(e) => setNewSong({ ...newSong, cover_url: e.target.value })} />
+                    <input className={`${inputCls} sm:col-span-2`} placeholder="Stream URL or YouTube URL *" required value={newSong.stream_url} onChange={(e) => setNewSong({ ...newSong, stream_url: e.target.value })} />
+                    <select className={inputCls} value={newSong.source_type} onChange={(e) => setNewSong({ ...newSong, source_type: e.target.value })}>
+                      <option value="direct">Direct audio stream</option>
+                      <option value="youtube">YouTube</option>
+                    </select>
+                    <input className={inputCls} placeholder="Genre" value={newSong.genre} onChange={(e) => setNewSong({ ...newSong, genre: e.target.value })} />
+                    <input className={inputCls} placeholder="Mood" value={newSong.mood} onChange={(e) => setNewSong({ ...newSong, mood: e.target.value })} />
+                    <input className={inputCls} placeholder="Duration (seconds)" type="number" min={1} value={newSong.duration_seconds} onChange={(e) => setNewSong({ ...newSong, duration_seconds: e.target.value })} />
+                    <button className="sm:col-span-2 rounded-full bg-[#1DB954] hover:bg-[#1ed760] text-black font-bold py-3 transition-colors" type="submit">
+                      Add to catalog
+                    </button>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* ── SETTINGS tab ── */}
+            {activeTab === "settings" && (
+              <div className="space-y-6">
+                <h1 className="text-3xl font-bold">Settings</h1>
+                <div className="rounded-xl bg-[#181818] divide-y divide-[#282828]">
+                  {([
+                    { key: "persistentQueueOrdering" as const, label: "Persistent queue ordering", desc: "Save playlist queue order changes in Supabase." },
+                    { key: "enableSwipeGestures" as const, label: "Swipe gestures (mobile)", desc: "Swipe left to remove, right to play queue item." },
+                    { key: "enableNowPlayingView" as const, label: "Now Playing full view", desc: "Enable full-screen Now Playing from the player bar." },
+                  ]).map(({ key, label, desc }) => (
+                    <div key={key} className="flex items-center justify-between gap-4 px-5 py-4">
+                      <div>
+                        <p className="font-medium text-white text-sm">{label}</p>
+                        <p className="text-xs text-[#6A6A6A] mt-0.5">{desc}</p>
+                      </div>
+                      <Toggle checked={settings[key]} onChange={(v) => setSettings((p) => ({ ...p, [key]: v }))} />
+                    </div>
+                  ))}
+                </div>
+                {/* Account section */}
+                <div className="rounded-xl bg-[#181818] px-5 py-4">
+                  <p className="text-sm text-[#B3B3B3] mb-3">Signed in as <span className="text-white">{session.user.email}</span></p>
+                  <button className="rounded-full bg-red-600/20 hover:bg-red-600/30 text-red-400 font-semibold text-sm px-5 py-2 transition-colors" onClick={signOut}>Sign out</button>
+                </div>
+              </div>
+            )}
+
+          </div>{/* /max-w */}
+        </main>{/* /main */}
+
+        {/* ════ RIGHT PANEL: Queue ════ */}
+        {showQueuePanel && (
+          <aside className="hidden md:flex w-[320px] flex-col bg-[#121212] border-l border-[#282828] shrink-0">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#282828]">
+              <h3 className="font-bold text-white">Queue</h3>
+              <button className="text-[#B3B3B3] hover:text-white" onClick={() => setShowQueuePanel(false)}>✕</button>
+            </div>
+            <div className="flex-1 overflow-y-auto py-2">
+              {queue.length === 0 ? (
+                <p className="text-[#6A6A6A] text-sm text-center py-8">Queue is empty</p>
+              ) : (
+                queue.map((song, idx) => {
+                  const isCurrent = nowPlaying?.id === song.id;
+                  return (
+                    <div
+                      key={song.id}
+                      className={`flex items-center gap-3 px-4 py-2 cursor-pointer transition-colors ${isCurrent ? "bg-[#282828]" : "hover:bg-[#1A1A1A]"}`}
+                      onClick={() => playSong(song)}
+                    >
+                      <span className="w-5 text-xs text-[#6A6A6A] text-center">{idx + 1}</span>
+                      <img src={song.cover_url || DEFAULT_COVER} alt={song.title} className="w-9 h-9 rounded object-cover bg-[#333]" />
+                      <div className="flex-1 min-w-0">
+                        <p className={`truncate text-xs font-medium ${isCurrent ? "text-[#1DB954]" : "text-white"}`}>{song.title}</p>
+                        <p className="truncate text-xs text-[#B3B3B3]">{song.artist}</p>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </aside>
+        )}
+
+      </div>{/* /body flex */}
+
+      {/* ════════════════════════════════════════════════
+          NOW PLAYING BAR (fixed bottom, desktop)
+      ════════════════════════════════════════════════ */}
+      <footer className="hidden md:grid h-[90px] border-t border-[#282828] bg-[#181818] shrink-0 z-20"
+        style={{ gridTemplateColumns: "1fr auto 1fr" }}>
+
+        {/* Left: song info */}
+        <div className="flex items-center gap-3 px-4">
+          {nowPlaying ? (
+            <>
+              <img src={nowPlaying.cover_url || DEFAULT_COVER} alt={nowPlaying.title} className="w-14 h-14 rounded object-cover bg-[#333] shrink-0" />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-white">{nowPlaying.title}</p>
+                <p className="truncate text-xs text-[#B3B3B3]">{nowPlaying.artist}</p>
+              </div>
+            </>
+          ) : (
+            <p className="text-xs text-[#6A6A6A]">Nothing playing</p>
+          )}
+        </div>
+
+        {/* Center: controls + seek */}
+        <div className="flex flex-col items-center justify-center gap-1 px-4 w-[380px]">
+          <div className="flex items-center gap-6">
+            <button className="text-[#B3B3B3] hover:text-white transition-colors" onClick={playPrevious}><IconPrev /></button>
+            <button
+              className="w-9 h-9 rounded-full bg-white hover:scale-105 flex items-center justify-center transition-transform"
+              onClick={() => setIsPlaying((v) => !v)}
+            >
+              <span className="text-black">{isPlaying ? <IconPause /> : <IconPlay />}</span>
+            </button>
+            <button className="text-[#B3B3B3] hover:text-white transition-colors" onClick={playNext}><IconNext /></button>
+          </div>
+          <div className="flex items-center gap-2 w-full">
+            <span className="text-xs text-[#B3B3B3] w-8 text-right">{formatTime(currentTime)}</span>
+            <input
+              type="range" min={0} max={duration || 1} value={currentTime}
+              onChange={(e) => { const t = Number(e.target.value); setCurrentTime(t); playerRef.current?.seekTo(t, "seconds"); }}
+              className="flex-1 h-1 accent-white rounded-full bg-[#4D4D4D] cursor-pointer"
+            />
+            <span className="text-xs text-[#B3B3B3] w-8">{formatTime(duration)}</span>
+          </div>
+        </div>
+
+        {/* Right: volume + extras */}
+        <div className="flex items-center justify-end gap-3 px-4">
+          {settings.enableNowPlayingView && nowPlaying && (
+            <button
+              className="text-[#B3B3B3] hover:text-white text-xs font-medium px-2 py-1 rounded hover:bg-[#282828] transition-colors"
+              onClick={() => setShowNowPlayingExpanded(true)}
+            >
+              Full view
+            </button>
+          )}
+          <button
+            className={`text-[#B3B3B3] hover:text-white transition-colors p-1 rounded ${showQueuePanel ? "text-white" : ""}`}
+            onClick={() => setShowQueuePanel((v) => !v)}
+            title="Toggle queue"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h12v2H3v-2z" />
+            </svg>
+          </button>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-[#B3B3B3]">
+            <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z" />
+          </svg>
+          <input
+            type="range" min={0} max={1} step={0.01} value={volume}
+            onChange={(e) => setVolume(Number(e.target.value))}
+            className="w-24 h-1 accent-white rounded-full bg-[#4D4D4D] cursor-pointer"
+          />
+          {/* Hidden player */}
+          {nowPlaying && (
+            <div className="absolute opacity-0 pointer-events-none w-0 h-0 overflow-hidden">
+              <ReactPlayer
+                ref={playerRef}
+                url={streamUrl}
+                playing={isPlaying}
+                volume={volume}
+                width="0" height="0"
+                onProgress={({ playedSeconds }) => setCurrentTime(playedSeconds)}
+                onDuration={(d) => setDuration(d)}
+                onEnded={playNext}
+              />
+            </div>
+          )}
+        </div>
+      </footer>
+
+      {/* ════════════════════════════════════════════════
+          MOBILE MINI-PLAYER
+      ════════════════════════════════════════════════ */}
+      {nowPlaying && (
+        <div
+          className="md:hidden fixed bottom-[64px] left-0 right-0 z-30 bg-[#181818] border-t border-[#282828] px-4 py-2 flex items-center gap-3"
+          onClick={() => settings.enableNowPlayingView && setShowNowPlayingExpanded(true)}
+        >
+          {/* Hidden player for mobile */}
+          <div className="absolute opacity-0 pointer-events-none w-0 h-0 overflow-hidden">
+            <ReactPlayer
+              ref={playerRef}
+              url={streamUrl}
+              playing={isPlaying}
+              volume={volume}
+              width="0" height="0"
+              onProgress={({ playedSeconds }) => setCurrentTime(playedSeconds)}
+              onDuration={(d) => setDuration(d)}
+              onEnded={playNext}
+            />
+          </div>
+          <img src={nowPlaying.cover_url || DEFAULT_COVER} alt={nowPlaying.title} className="w-10 h-10 rounded object-cover bg-[#333] shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="truncate text-sm font-medium text-white">{nowPlaying.title}</p>
+            <p className="truncate text-xs text-[#B3B3B3]">{nowPlaying.artist}</p>
+          </div>
+          <button className="text-white p-2" onClick={(e) => { e.stopPropagation(); setIsPlaying((v) => !v); }}>
+            {isPlaying ? <IconPause /> : <IconPlay />}
+          </button>
+          <button className="text-[#B3B3B3] p-2" onClick={(e) => { e.stopPropagation(); playNext(); }}>
+            <IconNext />
+          </button>
+        </div>
+      )}
+
+      {/* ════════════════════════════════════════════════
+          MOBILE TAB BAR
+      ════════════════════════════════════════════════ */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 h-16 bg-[#181818] border-t border-[#282828] flex">
+        {([
+          { id: "home" as MobileTab, label: "Home", icon: <IconHome filled={mobileTab === "home"} /> },
+          { id: "search" as MobileTab, label: "Search", icon: <IconSearch /> },
+          { id: "library" as MobileTab, label: "Library", icon: <IconLibrary /> },
+        ]).map(({ id, label, icon }) => (
+          <button
+            key={id}
+            className={`flex-1 flex flex-col items-center justify-center gap-1 text-xs font-medium transition-colors ${mobileTab === id ? "text-white" : "text-[#B3B3B3]"}`}
+            onClick={() => { setMobileTab(id); setActiveTab(id); }}
+          >
+            {icon}
+            {label}
+          </button>
+        ))}
+        {/* Upload button */}
+        <button
+          className={`flex-1 flex flex-col items-center justify-center gap-1 text-xs font-medium transition-colors ${activeTab === "upload" ? "text-[#1DB954]" : "text-[#B3B3B3]"}`}
+          onClick={() => { setActiveTab("upload"); }}
+        >
+          <IconUpload />
+          Upload
+        </button>
+      </nav>
+
+      {/* ════════════════════════════════════════════════
+          DESKTOP NAV: Upload + Settings in topbar
+      ════════════════════════════════════════════════ */}
+      <div className="hidden md:flex fixed top-4 right-4 gap-2 z-10">
+        <button
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${activeTab === "upload" ? "bg-[#282828] text-white" : "text-[#B3B3B3] hover:text-white hover:bg-[#282828]"}`}
+          onClick={() => setActiveTab(activeTab === "upload" ? "home" : "upload")}
+        >
+          <IconUpload /> Upload
+        </button>
+        <button
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${activeTab === "settings" ? "bg-[#282828] text-white" : "text-[#B3B3B3] hover:text-white hover:bg-[#282828]"}`}
+          onClick={() => setActiveTab(activeTab === "settings" ? "home" : "settings")}
+        >
+          <IconSettings /> Settings
+        </button>
+      </div>
+
+      {/* ════════════════════════════════════════════════
+          EXPANDED NOW PLAYING (full screen)
+      ════════════════════════════════════════════════ */}
+      {showNowPlayingExpanded && nowPlaying && (
+        <div
+          ref={nowPlayingExpandedRef}
+          className="fixed inset-0 z-50 flex flex-col"
+          style={{ background: "linear-gradient(180deg, #1a1a2e 0%, #121212 70%)" }}
+          onTouchStart={onNPTouchStart}
+          onTouchEnd={onNPTouchEnd}
+        >
+          {/* Top bar */}
+          <div className="flex items-center justify-between px-5 pt-10 pb-2">
+            <button className="text-[#B3B3B3] hover:text-white p-2" onClick={() => setShowNowPlayingExpanded(false)}>
+              <IconChevronDown />
+            </button>
+            <div className="text-center">
+              <p className="text-xs font-semibold text-[#B3B3B3] uppercase tracking-widest">Now Playing</p>
+            </div>
+            <div className="w-10" />
+          </div>
+
+          {/* Album art */}
+          <div className="flex justify-center px-10 mt-6">
+            <div className="w-full max-w-[280px] aspect-square rounded-2xl overflow-hidden shadow-2xl bg-[#282828]">
+              <img src={nowPlaying.cover_url || DEFAULT_COVER} alt={nowPlaying.title} className="w-full h-full object-cover" />
+            </div>
+          </div>
+
+          {/* Track info */}
+          <div className="flex items-center justify-between px-8 mt-8">
+            <div className="min-w-0">
+              <p className="text-2xl font-bold text-white truncate">{nowPlaying.title}</p>
+              <p className="text-[#B3B3B3] truncate">{nowPlaying.artist}</p>
+            </div>
+          </div>
+
+          {/* Seek bar */}
+          <div className="px-8 mt-4">
+            <input
+              type="range" min={0} max={duration || 1} value={currentTime}
+              onChange={(e) => { const t = Number(e.target.value); setCurrentTime(t); playerRef.current?.seekTo(t, "seconds"); }}
+              className="w-full h-1 accent-white rounded-full bg-[#4D4D4D] cursor-pointer"
+            />
+            <div className="flex justify-between text-xs text-[#B3B3B3] mt-1">
+              <span>{formatTime(currentTime)}</span>
+              <span>{formatTime(duration)}</span>
+            </div>
+          </div>
+
+          {/* Controls */}
+          <div className="flex items-center justify-between px-12 mt-4">
+            <button className="text-[#B3B3B3] hover:text-white p-3 transition-colors" onClick={playPrevious}><IconPrev /></button>
+            <button
+              className="w-16 h-16 rounded-full bg-white hover:scale-105 flex items-center justify-center transition-transform shadow-lg"
+              onClick={() => setIsPlaying((v) => !v)}
+            >
+              <span className="text-black scale-125">{isPlaying ? <IconPause /> : <IconPlay />}</span>
+            </button>
+            <button className="text-[#B3B3B3] hover:text-white p-3 transition-colors" onClick={playNext}><IconNext /></button>
+          </div>
+
+          {/* Lyrics */}
+          {(lyrics || lyricsLoading) && (
+            <div className="flex-1 overflow-y-auto mx-6 mt-4 rounded-xl bg-[#282828]/60 p-4">
+              <p className="text-xs font-semibold uppercase tracking-widest text-[#6A6A6A] mb-3">Lyrics</p>
+              {lyricsLoading ? (
+                <p className="text-sm text-[#6A6A6A]">Loading lyrics…</p>
+              ) : (
+                <p className="text-sm text-[#B3B3B3] whitespace-pre-wrap leading-7">{lyrics}</p>
+              )}
+            </div>
+          )}
+
+          <div className="h-8" />
+        </div>
+      )}
+
+    </div>
+  );
+}
+</file>
+
+<file path="src/lib/supabase.ts">
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+export const hasSupabaseEnv = Boolean(supabaseUrl && supabaseAnonKey);
+
+export const supabase = createClient(
+  supabaseUrl ?? "https://placeholder.supabase.co",
+  supabaseAnonKey ?? "placeholder-anon-key",
+);
+</file>
+
+<file path="tsconfig.json">
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts",
+    "**/*.mts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}
+</file>
+
+</files>

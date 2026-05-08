@@ -69,6 +69,9 @@ export default function PlaylistImportModal({ onClose, onImport }: Props) {
   }, [tracks, resolvedMap, playlistName, onImport, onClose]);
 
   const resolvedCount = Object.values(resolvedMap).filter(Boolean).length;
+  const jamendoCount = Object.values(resolvedMap).filter((r) => r?.source === 'jamendo').length;
+  const youtubeCount = Object.values(resolvedMap).filter((r) => r?.source === 'youtube').length;
+  const directCount = Object.values(resolvedMap).filter((r) => r?.source === 'direct').length;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
@@ -156,7 +159,9 @@ export default function PlaylistImportModal({ onClose, onImport }: Props) {
                 style={{ width: `${resolveProgress}%` }}
               />
             </div>
-            <p className="text-[#B3B3B3] text-sm">{resolveProgress}% — searching Jamendo &amp; YouTube</p>
+            <p className="text-[#B3B3B3] text-sm">
+              {resolveProgress}% — prioritizing exact Jamendo, then close Jamendo, then exact YouTube
+            </p>
           </div>
         )}
 
@@ -166,6 +171,9 @@ export default function PlaylistImportModal({ onClose, onImport }: Props) {
             <div className="py-4 text-center mb-4">
               <div className="text-4xl mb-2">✅</div>
               <p className="text-white font-semibold">{resolvedCount} / {tracks.length} tracks resolved</p>
+              <p className="text-[#B3B3B3] text-sm mt-2">
+                Jamendo: {jamendoCount} · YouTube: {youtubeCount} · Direct links: {directCount}
+              </p>
               {resolvedCount < tracks.length && (
                 <p className="text-[#B3B3B3] text-sm mt-1">
                   {tracks.length - resolvedCount} tracks could not be found — they will be imported without a stream URL.

@@ -1,8 +1,12 @@
 @import "tailwindcss";
 
+/* Tailwind v4: scan all TS/TSX so utilities aren’t dropped for components/hooks */
+@source "../**/*.{js,ts,jsx,tsx,mdx}";
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: dark;
+  --background: #000000;
+  --foreground: #ffffff;
 }
 
 @theme inline {
@@ -12,15 +16,26 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Always dark shell for this app — avoids white-on-white when OS is in light mode */
+body {
+  margin: 0;
+  min-height: 100%;
+  background: #000000;
+  color: #ffffff;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Mobile tab bar sits above the player (Spotify-style) */
+.mobile-tab-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 96px;
+  z-index: 25;
+  display: flex;
+  align-items: stretch;
+  min-height: 52px;
+  background: #000;
+  border-top: 1px solid #282828;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }

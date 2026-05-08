@@ -47,6 +47,12 @@ create policy "songs_insert_auth" on public.songs
 for insert to authenticated
 with check (auth.uid() = uploaded_by);
 
+drop policy if exists "songs_update_uploader_only" on public.songs;
+create policy "songs_update_uploader_only" on public.songs
+for update to authenticated
+using (auth.uid() = uploaded_by)
+with check (auth.uid() = uploaded_by);
+
 drop policy if exists "playlists_select_public_or_owner" on public.playlists;
 create policy "playlists_select_public_or_owner" on public.playlists
 for select
@@ -113,4 +119,3 @@ with check (
     where p.id = playlist_id and p.owner_id = auth.uid()
   )
 );
-

@@ -1,12 +1,17 @@
 // src/lib/search.ts
 // Auto-resolve tracks against Jamendo and YouTube
 
+import { scoreTrackMatch } from './externalMusicSearch';
+
 export interface ResolvedTrack {
     source: 'jamendo' | 'youtube' | 'direct';
     streamUrl: string;        // direct audio URL (jamendo) or YouTube watch URL
     jamendoId?: string;       // cache this, not the audio URL (it expires)
     youtubeId?: string;       // cache this
     thumbnailUrl?: string;
+    matchedTitle?: string;
+    matchedArtist?: string;
+    matchScore?: number;
   }
   
   // ---- Jamendo ---------------------------------------------------------------
@@ -24,7 +29,7 @@ export interface ResolvedTrack {
     if (!clientId) return null;
     try {
       const url = `https://api.jamendo.com/v3.0/tracks/?client_id=${clientId}`
-        + `&search=${encodeURIComponent(query.slice(0, 128))}&audioformat=mp32&limit=1`;
+        + `&search=${encodeURIComponent(query.slice(0, 128))}&audioformat=mp32&limit=8`;
       const res = await fetch(url);
       if (!res.ok) return null;
       const data = await res.json();
@@ -63,7 +68,7 @@ export interface ResolvedTrack {
     try {
       const url = `https://www.googleapis.com/youtube/v3/search`
         + `?q=${encodeURIComponent(query)}&type=video&videoCategoryId=10`
-        + `&maxResults=1&part=snippet&key=${apiKey}`;
+        + `&maxResults=8&part=snippet&key=${apiKey}`;
       const res = await fetch(url);
       if (!res.ok) return null;
       const data = await res.json();
@@ -81,25 +86,54 @@ export interface ResolvedTrack {
   ): Promise<ResolvedTrack | null> {
     const query = `${artist} ${title}`.trim();
   
-    // 1. Try Jamendo first (better audio quality, no embed restriction)
-    const jamendo = await searchJamendo(query);
-    if (jamendo?.audio) {
+    const [jamendoResults, youtubeResults] = await Promise.all([
+      searchJamendoMulti(query),
+      searchYouTubeMulti(query),
+    ]);
+
+    const rankedJamendo = jamendoResults
+      .map((track) => ({
+        track,
+        score: scoreTrackMatch(title, artist, track.title, track.artist),
+      }))
+      .sort((a, b) => b.score - a.score);
+    const rankedYoutube = youtubeResults
+      .map((track) => ({
+        track,
+        score: scoreTrackMatch(title, artist, track.title, track.artist),
+      }))
+      .sort((a, b) => b.score - a.score);
+
+    const exactJamendo = rankedJamendo.find((candidate) => candidate.score >= 0.86);
+    const closeJamendo = rankedJamendo.find((candidate) => candidate.score >= 0.62);
+    const exactYoutube = rankedYoutube.find((candidate) => candidate.score >= 0.86);
+    const closeYoutube = rankedYoutube.find((candidate) => candidate.score >= 0.7);
+
+    // Prefer Jamendo exact, then a very close Jamendo alternative, then exact YouTube.
+    const selectedJamendo = exactJamendo ?? closeJamendo;
+    if (selectedJamendo?.track.streamUrl) {
+      const jamendoId = selectedJamendo.track.jamendoId?.replace(/^jamendo-/, '');
       return {
         source: 'jamendo',
-        streamUrl: jamendo.audio,
-        jamendoId: jamendo.id,
-        thumbnailUrl: jamendo.album_image,
+        streamUrl: selectedJamendo.track.streamUrl,
+        jamendoId,
+        thumbnailUrl: selectedJamendo.track.thumbnailUrl,
+        matchedTitle: selectedJamendo.track.title,
+        matchedArtist: selectedJamendo.track.artist,
+        matchScore: selectedJamendo.score,
       };
     }
   
-    // 2. Fall back to YouTube
-    const yt = await searchYouTube(query);
-    if (yt?.id?.videoId) {
+    const selectedYoutube = exactYoutube ?? closeYoutube ?? rankedYoutube[0];
+    if (selectedYoutube?.track.youtubeId) {
       return {
         source: 'youtube',
-        streamUrl: `https://www.youtube.com/watch?v=${yt.id.videoId}`,
-        youtubeId: yt.id.videoId,
-        thumbnailUrl: yt.snippet.thumbnails.default.url,
+        streamUrl: selectedYoutube.track.streamUrl,
+        youtubeId: selectedYoutube.track.youtubeId,
+        thumbnailUrl: selectedYoutube.track.thumbnailUrl,
+        matchedTitle: selectedYoutube.track.title,
+        matchedArtist: selectedYoutube.track.artist,
+        matchScore: selectedYoutube.score,
       };
     }
   

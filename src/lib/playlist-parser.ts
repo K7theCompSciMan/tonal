@@ -6,7 +6,6 @@ export interface ParsedTrack {
     artist: string;
     duration?: number;       // seconds
     hintUrl?: string;        // direct stream URL if already known (from M3U)
-    resolved?: boolean;      // true once autoResolveTrack() has run
   }
   
   // ---- M3U -------------------------------------------------------------------

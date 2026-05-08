@@ -12,6 +12,7 @@ interface Shortcuts {
   onSeekBack?: () => void;      // -5s
   onLike?: () => void;
   onToggleQueue?: () => void;
+  onToggleLyrics?: () => void;
   onShowHelp?: () => void;
   onVolumeUp?: () => void;
   onVolumeDown?: () => void;
@@ -53,6 +54,10 @@ export function useKeyboardShortcuts(shortcuts: Shortcuts) {
         case 'Q':
           shortcuts.onToggleQueue?.();
           break;
+        case 'y':
+        case 'Y':
+          shortcuts.onToggleLyrics?.();
+          break;
         case '?':
           shortcuts.onShowHelp?.();
           break;
@@ -73,5 +78,6 @@ export const SHORTCUT_LIST = [
   { keys: ['↑', '↓'], description: 'Volume up / down' },
   { keys: ['L'], description: 'Like / unlike current track' },
   { keys: ['Q'], description: 'Toggle queue panel' },
+  { keys: ['Y'], description: 'Toggle lyrics panel' },
   { keys: ['?'], description: 'Show this help' },
 ];

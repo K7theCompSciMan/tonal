@@ -160,7 +160,7 @@ export default function PlaylistImportModal({ onClose, onImport }: Props) {
               />
             </div>
             <p className="text-[#B3B3B3] text-sm">
-              {resolveProgress}% — prioritizing exact Jamendo, then close Jamendo, then exact YouTube
+              {resolveProgress}% — prioritizing YouTube
             </p>
           </div>
         )}

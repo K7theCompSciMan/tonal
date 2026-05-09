@@ -202,7 +202,8 @@ export default function TonalApp() {
   const [queueOrderBeforeShuffle, setQueueOrderBeforeShuffle] = useState<PlayableTrack[] | null>(
     null,
   );
-  const [volume, setVolume] = useState(0.7);
+  const initialVolume = localStorage.getItem("volume") ? Number(localStorage.getItem("volume")) : 0.3;
+  const [volume, setVolume] = useState(initialVolume);
   const [playedSeconds, setPlayedSeconds] = useState(0);
   const [duration, setDuration] = useState(0);
   const playerRef = useRef<HTMLVideoElement | null>(null);
@@ -213,6 +214,12 @@ export default function TonalApp() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<PlayableTrack[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+
+
+  const setVolumeLocalStorage = (volume: number) => {
+    localStorage.setItem("volume", volume.toString());
+    return setVolume(volume);
+  }
 
   const selectedPlaylist = useMemo(
     () => playlists.find((playlist) => playlist.id === selectedPlaylistId) ?? null,
@@ -225,17 +232,17 @@ export default function TonalApp() {
         tracks: searchResults.filter((track) => isDbSong(track)),
       },
       {
-        label: "Jamendo",
-        tracks: searchResults.filter(
-          (track) => !isDbSong(track) && track.sourceProvider === "jamendo",
-        ),
-      },
-      {
         label: "YouTube",
         tracks: searchResults.filter(
           (track) =>
             (!isDbSong(track) && track.sourceProvider === "youtube") ||
-            (!isDbSong(track) && !track.sourceProvider && track.sourceType === "youtube"),
+            (!isDbSong(track) && track.sourceType === "youtube"),
+        ),
+      },
+      {
+        label: "Jamendo",
+        tracks: searchResults.filter(
+          (track) => !isDbSong(track) && track.sourceProvider === "jamendo",
         ),
       },
       {
@@ -1381,7 +1388,7 @@ export default function TonalApp() {
             max={1}
             step={0.01}
             value={volume}
-            onChange={(e) => setVolume(Number(e.target.value))}
+            onChange={(e) => setVolumeLocalStorage(Number(e.target.value))}
             className="tonal-volume w-16 md:w-24 accent-[#1DB954] hidden sm:block"
             aria-label="Volume"
           />
@@ -1403,14 +1410,14 @@ export default function TonalApp() {
           />
         ) : null}
       </div>
-
+      {screen.width < 768 ? 
       <MobileNav
         activeTab={activeTab}
         onTabChange={(id) => setActiveTab(id as Tab)}
         hasNowPlaying={Boolean(currentSong)}
         onNowPlayingClick={() => setShowExpandedPlayer(true)}
-      />
-
+      /> 
+      : <div></div>}
       {showExpandedPlayer && expandedSong && (
         <NowPlayingExpanded
           song={expandedSong}

@@ -167,14 +167,14 @@ export function filterLocalLibrary(query: string, songs: DbSong[]): DbSong[] {
 /** Runs Jamendo, YouTube, and iTunes in parallel; returns provider-grouped results. */
 export async function searchAllStreamingSources(query: string): Promise<ExternalSong[]> {
   const [jam, yt, itunes] = await Promise.all([
-    searchJamendoSongs(query),
     searchYouTubeSongs(query),
     searchITunesSongs(query),
+    searchJamendoSongs(query),
   ]);
   const rank = (song: ExternalSong) => scoreTrackMatch(query, "", song.title, song.artist);
   return dedupeByStreamUrl([
-    ...jam.sort((a, b) => rank(b) - rank(a)),
     ...yt.sort((a, b) => rank(b) - rank(a)),
+    ...jam.sort((a, b) => rank(b) - rank(a)),
     ...itunes.sort((a, b) => rank(b) - rank(a)),
   ]);
 }

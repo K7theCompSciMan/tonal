@@ -202,8 +202,7 @@ export default function TonalApp() {
   const [queueOrderBeforeShuffle, setQueueOrderBeforeShuffle] = useState<PlayableTrack[] | null>(
     null,
   );
-  const initialVolume = localStorage.getItem("volume") ? Number(localStorage.getItem("volume")) : 0.3;
-  const [volume, setVolume] = useState(initialVolume);
+  const [volume, setVolume] = useState(0.3);
   const [playedSeconds, setPlayedSeconds] = useState(0);
   const [duration, setDuration] = useState(0);
   const playerRef = useRef<HTMLVideoElement | null>(null);
@@ -217,9 +216,19 @@ export default function TonalApp() {
 
 
   const setVolumeLocalStorage = (volume: number) => {
-    localStorage.setItem("volume", volume.toString());
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("volume", volume.toString());
+    }
     return setVolume(volume);
   }
+
+  useEffect(() => {
+    const storedVolume = window.localStorage.getItem("volume");
+    if (!storedVolume) return;
+    const parsedVolume = Number(storedVolume);
+    if (Number.isNaN(parsedVolume)) return;
+    setVolume(parsedVolume);
+  }, []);
 
   const selectedPlaylist = useMemo(
     () => playlists.find((playlist) => playlist.id === selectedPlaylistId) ?? null,
@@ -1410,14 +1419,14 @@ export default function TonalApp() {
           />
         ) : null}
       </div>
-      {screen.width < 768 ? 
-      <MobileNav
-        activeTab={activeTab}
-        onTabChange={(id) => setActiveTab(id as Tab)}
-        hasNowPlaying={Boolean(currentSong)}
-        onNowPlayingClick={() => setShowExpandedPlayer(true)}
-      /> 
-      : <div></div>}
+      <div className="md:hidden">
+        <MobileNav
+          activeTab={activeTab}
+          onTabChange={(id) => setActiveTab(id as Tab)}
+          hasNowPlaying={Boolean(currentSong)}
+          onNowPlayingClick={() => setShowExpandedPlayer(true)}
+        />
+      </div>
       {showExpandedPlayer && expandedSong && (
         <NowPlayingExpanded
           song={expandedSong}

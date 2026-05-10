@@ -927,6 +927,8 @@ export default function TonalApp() {
           ))}
         </div>
         {renderAuthPanel()}
+        <div className="h-[96px] md:h-24">
+        </div>
       </aside>
 
       {/* MAIN */}

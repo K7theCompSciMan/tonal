@@ -17,6 +17,10 @@ import {
   isSameTrack,
   isDbSong,
 } from "@/lib/trackUtils";
+import {
+  setMediaSessionMetadata,
+  clearMediaSession,
+} from "@/lib/trackUtils";
 
 import LyricsPanel from "@/components/LyricsPanel";
 import MobileNav from "@/components/MobileNav";
@@ -293,6 +297,49 @@ export default function TonalApp() {
   useEffect(() => {
     void fetchData(null);
   }, []);
+
+    useEffect(() => {
+    if (!currentSong) {
+      clearMediaSession();
+      return;
+    }
+ 
+    setMediaSessionMetadata(currentSong, {
+      onPlay:  () => setIsPlaying(true),
+      onPause: () => setIsPlaying(false),
+      onNext:  handleNext,
+      onPrev:  handlePrev,
+      onSeekForward:  () => seekTo(Math.min(playedSeconds + 10, duration)),
+      onSeekBackward: () => seekTo(Math.max(playedSeconds - 10, 0)),
+    });
+ 
+    // Sync the playbackState flag so iOS knows when we're paused vs playing
+    if ("mediaSession" in navigator) {
+      navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
+    }
+  }, [currentSong, isPlaying]);
+
+  useEffect(() => {
+    if (!currentSong) {
+      clearMediaSession();
+      return;
+    }
+ 
+    setMediaSessionMetadata(currentSong, {
+      onPlay:  () => setIsPlaying(true),
+      onPause: () => setIsPlaying(false),
+      onNext:  handleNext,
+      onPrev:  handlePrev,
+      onSeekForward:  () => seekTo(Math.min(playedSeconds + 10, duration)),
+      onSeekBackward: () => seekTo(Math.max(playedSeconds - 10, 0)),
+    });
+ 
+    // Sync the playbackState flag so iOS knows when we're paused vs playing
+    if ("mediaSession" in navigator) {
+      navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
+    }
+  }, [currentSong, isPlaying]);
+
 
   useEffect(() => {
     let mounted = true;
@@ -1408,18 +1455,17 @@ export default function TonalApp() {
 
       {/* Hidden player — ReactPlayer v3 uses src + native video ref */}
       <div className="fixed pointer-events-none opacity-0 w-px h-px overflow-hidden" aria-hidden>
-        {playbackUrl ? (
-          <ReactPlayer
-            ref={playerRef}
-            src={playbackUrl}
-            playing={isPlaying}
-            volume={volume}
-            controls={false}
-            onTimeUpdate={(e) => setPlayedSeconds(e.currentTarget.currentTime)}
-            onDurationChange={(e) => setDuration(e.currentTarget.duration)}
-            onEnded={handleNext}
-          />
-        ) : null}
+      <ReactPlayer
+        ref={playerRef}
+        src={playbackUrl || ""}
+        playing={isPlaying && Boolean(playbackUrl)}
+        volume={volume}
+        controls={false}
+        onTimeUpdate={(e) => setPlayedSeconds(e.currentTarget.currentTime)}
+        onDurationChange={(e) => setDuration(e.currentTarget.duration)}
+        onEnded={handleNext}
+      />
+
       </div>
       <div className="md:hidden">
         <MobileNav
@@ -1451,6 +1497,7 @@ export default function TonalApp() {
         <PlaylistImportModal
           onClose={() => setIsImportModalOpen(false)}
           onImport={handlePlaylistImport}
+          librarySnapshot={librarySongs}
         />
       )}
 

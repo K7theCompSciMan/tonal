@@ -14,16 +14,28 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Tonal",
-  description: "Music streaming web app powered by Jamindo and YouTube - made by @k7",
+  description:
+    "Music streaming web app powered by Jamendo and YouTube - made by @k7",
+  // PWA / installability hints
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Tonal",
+  },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  // Black theme-color keeps the iOS status-bar dark while audio plays in background
   themeColor: "#000000",
 };
 
+// ─── Inline CSS ───────────────────────────────────────────────────────────────
+// Keep the same appFallbackCss block from the original layout — not repeated
+// here for brevity; paste it in from your current layout.tsx.
 const appFallbackCss = `
 *{box-sizing:border-box}html,body{height:100%;margin:0;background:#000;color:#fff}button,input{font:inherit}button{cursor:pointer}img{display:block;max-width:100%}
 .tonal-shell{display:flex;height:100dvh;background:#000;color:#fff;overflow:hidden;font-family:var(--font-geist-sans),ui-sans-serif,system-ui,sans-serif}
@@ -64,6 +76,13 @@ export default function RootLayout({
     >
       <head>
         <style dangerouslySetInnerHTML={{ __html: appFallbackCss }} />
+        {/*
+          audio-session meta: tells iOS Safari this page plays audio.
+          Required for background audio to continue when the screen locks or
+          the user switches apps. Without this, iOS pauses audio aggressively.
+        */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body
         className={`${geistSans.className} min-h-dvh flex flex-col bg-black text-white antialiased`}

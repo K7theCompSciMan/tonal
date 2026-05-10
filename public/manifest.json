@@ -1,0 +1,20 @@
+{
+	"name": "Tonal",
+	"short_name": "Tonal",
+	"description": "Music streaming powered by YouTube & Jamendo",
+	"start_url": "/",
+	"display": "standalone",
+	"background_color": "#000000",
+	"theme_color": "#000000",
+	"orientation": "portrait-primary",
+	"icons": [
+		{
+			"src": "/next.svg",
+			"sizes": "any",
+			"type": "image/svg+xml",
+			"purpose": "any maskable"
+		}
+	],
+	"categories": ["music", "entertainment"],
+	"lang": "en"
+}

@@ -1,19 +1,23 @@
 'use client';
 // src/components/PlaylistImportModal.tsx
 // 4-step playlist import wizard: Upload → Preview → Resolve → Import
+// Resolution order: local library → YouTube → Jamendo
 
 import { useCallback, useRef, useState } from 'react';
 import { ParsedTrack, parsePlaylistFile } from '../lib/playlist-parser';
 import { autoResolveTrack, ResolvedTrack } from '../lib/search';
+import type { DbSong } from '../lib/types';
 
 interface Props {
   onClose: () => void;
   onImport: (name: string, tracks: Array<ParsedTrack & { resolved?: ResolvedTrack }>) => Promise<void>;
+  /** Pass the current library so we can match tracks locally before hitting APIs */
+  librarySnapshot?: DbSong[];
 }
 
 type Step = 'upload' | 'preview' | 'resolve' | 'done';
 
-export default function PlaylistImportModal({ onClose, onImport }: Props) {
+export default function PlaylistImportModal({ onClose, onImport, librarySnapshot = [] }: Props) {
   const [step, setStep] = useState<Step>('upload');
   const [playlistName, setPlaylistName] = useState('Imported Playlist');
   const [tracks, setTracks] = useState<ParsedTrack[]>([]);
@@ -42,22 +46,28 @@ export default function PlaylistImportModal({ onClose, onImport }: Props) {
   }, [handleFile]);
 
   // Step 2 → 3: resolve tracks
+  // Resolution priority: local library → hintUrl (direct) → YouTube → Jamendo
   const startResolve = useCallback(async () => {
     setStep('resolve');
     const map: Record<number, ResolvedTrack | null> = {};
+
     for (let i = 0; i < tracks.length; i++) {
       const t = tracks[i];
-      // Skip if has direct hint URL that looks like a direct audio stream
+
       if (t.hintUrl && !t.hintUrl.includes('youtube') && !t.hintUrl.includes('youtu.be')) {
+        // Already has a direct audio URL — use it as-is
         map[i] = { source: 'direct', streamUrl: t.hintUrl };
       } else {
-        map[i] = await autoResolveTrack(t.title, t.artist);
+        // Pass the library snapshot so local matches are found first
+        map[i] = await autoResolveTrack(t.title, t.artist, librarySnapshot);
       }
+
       setResolveProgress(Math.round(((i + 1) / tracks.length) * 100));
     }
+
     setResolvedMap(map);
     setStep('done');
-  }, [tracks]);
+  }, [tracks, librarySnapshot]);
 
   // Step 4: import
   const handleImport = useCallback(async () => {
@@ -69,9 +79,10 @@ export default function PlaylistImportModal({ onClose, onImport }: Props) {
   }, [tracks, resolvedMap, playlistName, onImport, onClose]);
 
   const resolvedCount = Object.values(resolvedMap).filter(Boolean).length;
-  const jamendoCount = Object.values(resolvedMap).filter((r) => r?.source === 'jamendo').length;
+  const libCount     = Object.values(resolvedMap).filter((r) => r?.source === 'library').length;
   const youtubeCount = Object.values(resolvedMap).filter((r) => r?.source === 'youtube').length;
-  const directCount = Object.values(resolvedMap).filter((r) => r?.source === 'direct').length;
+  const jamendoCount = Object.values(resolvedMap).filter((r) => r?.source === 'jamendo').length;
+  const directCount  = Object.values(resolvedMap).filter((r) => r?.source === 'direct').length;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
@@ -128,6 +139,11 @@ export default function PlaylistImportModal({ onClose, onImport }: Props) {
               />
             </div>
             <p className="text-[#B3B3B3] text-sm mb-3">{tracks.length} tracks found</p>
+            {librarySnapshot.length > 0 && (
+              <p className="text-[#1DB954] text-xs mb-3">
+                ✓ Will check your library ({librarySnapshot.length} songs) before searching online
+              </p>
+            )}
             <div className="max-h-48 overflow-y-auto space-y-1 mb-4">
               {tracks.slice(0, 50).map((t, i) => (
                 <div key={i} className="flex gap-2 text-sm text-[#E0E0E0] py-1 border-b border-[#333]">
@@ -160,7 +176,7 @@ export default function PlaylistImportModal({ onClose, onImport }: Props) {
               />
             </div>
             <p className="text-[#B3B3B3] text-sm">
-              {resolveProgress}% — prioritizing YouTube
+              {resolveProgress}% — checking library, then YouTube
             </p>
           </div>
         )}
@@ -172,11 +188,12 @@ export default function PlaylistImportModal({ onClose, onImport }: Props) {
               <div className="text-4xl mb-2">✅</div>
               <p className="text-white font-semibold">{resolvedCount} / {tracks.length} tracks resolved</p>
               <p className="text-[#B3B3B3] text-sm mt-2">
-                Jamendo: {jamendoCount} · YouTube: {youtubeCount} · Direct links: {directCount}
+                {libCount > 0 && `Library: ${libCount} · `}
+                YouTube: {youtubeCount} · Jamendo: {jamendoCount} · Direct: {directCount}
               </p>
               {resolvedCount < tracks.length && (
                 <p className="text-[#B3B3B3] text-sm mt-1">
-                  {tracks.length - resolvedCount} tracks could not be found — they will be imported without a stream URL.
+                  {tracks.length - resolvedCount} tracks could not be found — imported without a stream URL.
                 </p>
               )}
             </div>

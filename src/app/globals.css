@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Tailwind v4: scan all TS/TSX so utilities aren’t dropped for components/hooks */
+/* Tailwind v4: scan all TS/TSX so utilities aren't dropped for components/hooks */
 @source "../**/*.{js,ts,jsx,tsx,mdx}";
 
 :root {
@@ -39,3 +39,15 @@ body {
   border-top: 1px solid #282828;
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
+
+/*
+  Suppress the known-harmless console noise produced by the YouTube iframe embed
+  inside react-player. These messages appear because:
+  1. The YouTube iframe tries to postMessage to its parent but the origin check
+     is strict (http://localhost vs https://youtube.com).
+  2. The browser's Feature Policy blocks certain YouTube-requested permissions.
+  3. react-player's internal "maze-utils" fetcher hits a CORS-restricted data: URL.
+
+  None of these affect playback — they are purely cosmetic console noise.
+  We filter them out in a client-side script so the DevTools stay clean.
+*/

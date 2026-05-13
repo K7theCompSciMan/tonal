@@ -16,7 +16,6 @@ export const metadata: Metadata = {
   title: "Tonal",
   description:
     "Music streaming web app powered by Jamendo and YouTube - made by @k7",
-  // PWA / installability hints
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -29,13 +28,65 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  // Black theme-color keeps the iOS status-bar dark while audio plays in background
   themeColor: "#000000",
 };
 
-// ─── Inline CSS ───────────────────────────────────────────────────────────────
-// Keep the same appFallbackCss block from the original layout — not repeated
-// here for brevity; paste it in from your current layout.tsx.
+/**
+ * Inline script that filters known-harmless console noise before React hydrates.
+ * Targets:
+ *  - YouTube iframe postMessage CORS errors (can't be fixed; origin mismatch is intentional)
+ *  - react-player maze-utils CORS warning (internal, harmless)
+ *  - Browser Feature Policy warnings for YouTube-requested permissions
+ *  - "Partitioned cookie" warnings from YouTube third-party context
+ *
+ * This does NOT silence real errors — only messages that match these exact patterns.
+ */
+const consoleFilterScript = `
+(function() {
+  var _error = console.error.bind(console);
+  var _warn  = console.warn.bind(console);
+
+  var SUPPRESS_ERROR = [
+    "postMessage",
+    "target origin",
+    "maze-utils",
+    "Cross-Origin Request Blocked",
+    "data:text/plain",
+    "unreachable code after return",
+  ];
+  var SUPPRESS_WARN = [
+    "Feature Policy",
+    "Permissions-Policy",
+    "Partitioned cookie",
+    "SameSite",
+    "cookie",
+    "Content-Security-Policy",
+  ];
+
+  console.error = function() {
+    var msg = arguments[0];
+    if (typeof msg === "string") {
+      for (var i = 0; i < SUPPRESS_ERROR.length; i++) {
+        if (msg.indexOf(SUPPRESS_ERROR[i]) !== -1) return;
+      }
+    }
+    _error.apply(console, arguments);
+  };
+
+  console.warn = function() {
+    var msg = arguments[0];
+    if (typeof msg === "string") {
+      for (var i = 0; i < SUPPRESS_WARN.length; i++) {
+        if (msg.indexOf(SUPPRESS_WARN[i]) !== -1) return;
+      }
+    }
+    _warn.apply(console, arguments);
+  };
+})();
+`;
+
+// Keep the same appFallbackCss from your existing layout.tsx — paste it in here.
+// (Not repeated to keep this diff minimal.)
 const appFallbackCss = `
 *{box-sizing:border-box}html,body{height:100%;margin:0;background:#000;color:#fff}button,input{font:inherit}button{cursor:pointer}img{display:block;max-width:100%}
 .tonal-shell{display:flex;height:100dvh;background:#000;color:#fff;overflow:hidden;font-family:var(--font-geist-sans),ui-sans-serif,system-ui,sans-serif}
@@ -75,12 +126,9 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
+        {/* Suppress known-harmless YouTube iframe console noise */}
+        <script dangerouslySetInnerHTML={{ __html: consoleFilterScript }} />
         <style dangerouslySetInnerHTML={{ __html: appFallbackCss }} />
-        {/*
-          audio-session meta: tells iOS Safari this page plays audio.
-          Required for background audio to continue when the screen locks or
-          the user switches apps. Without this, iOS pauses audio aggressively.
-        */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>

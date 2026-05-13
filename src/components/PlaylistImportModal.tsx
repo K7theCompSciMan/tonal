@@ -28,6 +28,34 @@ export default function PlaylistImportModal({ onClose, onImport, librarySnapshot
 
   // Step 1: read file
   const handleFile = useCallback((file: File) => {
+    if (file.name.endsWith('.tonal.json')) {
+        const reader = new FileReader();
+      
+        reader.onload = async (e) => {
+          const text = e.target?.result as string;
+          const parsed = JSON.parse(text);
+      
+          const rebuiltTracks = parsed.tracks.map((t: any, i: number) => {
+            const blob = new Blob([t.audio]);
+            const localUrl = URL.createObjectURL(blob);
+      
+            return {
+              title: t.metadata.title,
+              artist: t.metadata.artist,
+              album: t.metadata.album,
+              hintUrl: localUrl,
+              localLyrics: t.lyrics,
+              order: i,
+            };
+          });
+      
+          setTracks(rebuiltTracks);
+          setStep('preview');
+        };
+      
+        reader.readAsText(file);
+        return;
+      }
     setPlaylistName(file.name.replace(/\.[^.]+$/, '') || 'Imported Playlist');
     const reader = new FileReader();
     reader.onload = (e) => {
